@@ -1,0 +1,1648 @@
+<!-- Qwen-3-Coder-Next-80B-8bit-MLX 
+Prompt processing 319.1 tok/s // Token generation 36.1 tok/s 
+Took 3 prompts to get to the final result. 
+2nd prompt - This is great! A few pointers: the camera is spinning way too fast when adjusting the mouse, the plane models are not showing in the plane selection screen, the plane does not die when it touches the ground.
+3rd prompt - the camera is still too sensitive. F-22 Raptor does not have a preview image and neither does P-51 Mustang  
+
+Notes: 
+Game is sort of playable, the camera is not as sensitive but it's still quite unintuitive to use, controls are okay, reflect a plane simulator steering.
+There is a map and you cannot go out of bounds, there's clouds too which are a nice touch. Nice shifting gradient on the plane selection screen. 
+I like the game name too, the models was creative. The stats for each plane are also a nice touch. There are no enemies, the plane models seem to be rotated 180 degrees (front is back and vice-versa)
+1635 lines of code
+ThreeJS and JavaScript
+--->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sky Ace - 3D Flight Combat Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #000;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: white;
+        }
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        canvas {
+            display: block;
+        }
+
+        /* UI Layers */
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .interactive {
+            pointer-events: auto;
+        }
+
+        /* Start Screen */
+        #start-screen {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+        }
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .title {
+            font-size: 5rem;
+            font-weight: bold;
+            text-shadow: 4px 4px 20px rgba(0,0,0,0.5);
+            margin-bottom: 2rem;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+        }
+        .subtitle {
+            font-size: 1.5rem;
+            color: #ffd700;
+            margin-bottom: 3rem;
+            text-shadow: 2px 2px 10px rgba(0,0,0,0.5);
+        }
+
+        /* Plane Selection */
+        .plane-selection {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        .plane-card {
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #ffd700;
+            border-radius: 15px;
+            padding: 2rem;
+            width: 300px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            backdrop-filter: blur(10px);
+        }
+        .plane-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            background: rgba(0, 0, 0, 0.85);
+        }
+        .plane-name {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            color: #fff;
+        }
+        .plane-image {
+            width: 200px;
+            height: 100px;
+            margin: 0 auto 1.5rem;
+            border-radius: 5px;
+            display: inline-block;
+            position: relative;
+        }
+        .plane-image::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 5px;
+            background-size: cover;
+            background-position: center;
+        }
+        .stats {
+            text-align: left;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+        .stat-label {
+            color: #aaa;
+        }
+        .stat-value {
+            color: #ffd700;
+            font-weight: bold;
+        }
+        .stat-bar {
+            height: 8px;
+            background: #333;
+            border-radius: 4px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+        .stat-fill {
+            height: 100%;
+            border-radius: 4px;
+        }
+
+        /* HUD */
+        #hud {
+            justify-content: space-between;
+            padding: 20px;
+            flex-direction: row;
+            align-items: flex-start;
+        }
+        .hud-top {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+        }
+        .hud-panel {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px 20px;
+            border-radius: 8px;
+            border-left: 3px solid #00ff00;
+        }
+        .hud-panel.damage {
+            border-left-color: #ff0000;
+        }
+        .hud-value {
+            font-size: 2rem;
+            font-weight: bold;
+            font-family: monospace;
+        }
+        .hud-label {
+            font-size: 0.8rem;
+            color: #aaa;
+        }
+        .crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            pointer-events: none;
+        }
+        .crosshair::before, .crosshair::after {
+            content: '';
+            position: absolute;
+            background: rgba(0, 255, 0, 0.8);
+        }
+        .crosshair::before {
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 1px;
+        }
+        .crosshair::after {
+            left: 50%;
+            top: 0;
+            height: 100%;
+            width: 1px;
+        }
+
+        /* Controls Hint */
+        #controls-hint {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            text-align: center;
+        }
+
+        /* Game Over Screen */
+        #game-over-screen {
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+        }
+        .game-over-content {
+            text-align: center;
+        }
+        .game-over-title {
+            font-size: 4rem;
+            color: #ff0000;
+            margin-bottom: 1rem;
+        }
+        .game-over-stats {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .btn {
+            background: #ffd700;
+            color: #000;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+            text-transform: uppercase;
+        }
+        .btn:hover {
+            transform: scale(1.05);
+            background: #ffed4a;
+        }
+
+        /* Level Up Notification */
+        #level-up {
+            position: absolute;
+            top: 30%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            color: #ffd700;
+            text-shadow: 2px 2px 10px rgba(0,0,0,0.8);
+            display: none;
+            animation: levelUpAnim 2s ease-out;
+        }
+        @keyframes levelUpAnim {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+        }
+
+        /* Blackout Overlay */
+        #blackout {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: black;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 2s ease-in;
+            z-index: 1000;
+        }
+
+        /* Loading Screen */
+        #loading-screen {
+            background: #000;
+        }
+        .loader {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #333;
+            border-top: 4px solid #ffd700;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 2rem auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <!-- Canvas Layer -->
+        <canvas id="game-canvas"></canvas>
+
+        <!-- Loading Screen -->
+        <div id="loading-screen" class="ui-layer interactive">
+            <div class="loader"></div>
+            <p style="margin-top: 1rem; color: #ffd700;">Initializing Flight Systems...</p>
+        </div>
+
+        <!-- Start Screen -->
+        <div id="start-screen" class="ui-layer interactive">
+            <div class="title">SKY ACE</div>
+            <div class="subtitle">3D Flight Combat Simulator</div>
+
+            <div class="plane-selection">
+                <div class="plane-card" onclick="selectPlane('fighter')">
+                    <div class="plane-name">F-22 Raptor</div>
+                    <div class="plane-preview-container" style="width: 200px; height: 100px; margin: 0 auto 1.5rem;"></div>
+                    <div class="stats">
+                        <div class="stat-row">
+                            <span class="stat-label">Speed</span>
+                            <span class="stat-value">95/100</span>
+                        </div>
+                        <div class="stat-bar"><div class="stat-fill" style="background: #00ff00; width: 95%;"></div></div>
+                        <div class="stat-row">
+                            <span class="stat-label">Maneuverability</span>
+                            <span class="stat-value">85/100</span>
+                        </div>
+                        <div class="stat-bar"><div class="stat-fill" style="background: #00ff00; width: 85%;"></div></div>
+                        <div class="stat-row">
+                            <span class="stat-label">Armor</span>
+                            <span class="stat-value">50/100</span>
+                        </div>
+                        <div class="stat-bar"><div class="stat-fill" style="background: #ffaa00; width: 50%;"></div></div>
+                        <div class="stat-row">
+                            <span class="stat-label">Armament</span>
+                            <span class="stat-value">90/100</span>
+                        </div>
+                        <div class="stat-bar"><div class="stat-fill" style="background: #ff0000; width: 90%;"></div></div>
+                        <div class="stat-row">
+                            <span class="stat-label">Range</span>
+                            <span class="stat-value">75/100</span>
+                        </div>
+                        <div class="stat-bar"><div class="stat-fill" style="background: #00aaff; width: 75%;"></div></div>
+                    </div>
+                </div>
+
+                <div class="plane-card" onclick="selectPlane('propeller')">
+                    <div class="plane-name">P-51 Mustang</div>
+                    <div class="plane-preview-container" style="width: 200px; height: 100px; margin: 0 auto 1.5rem;"></div>
+                    <div class="stats">
+                        <div class="stat-row">
+                            <span class="stat-label">Speed</span>
+                            <span class="stat-value">60/100</span>
+                        </div>
+                        <div class="stat-bar"><div class="stat-fill" style="background: #ffaa00; width: 60%;"></div></div>
+                        <div class="stat-row">
+                            <span class="stat-label">Maneuverability</span>
+                            <span class="stat-value">95/100</span>
+                        </div>
+                        <div class="stat-bar"><div class="stat-fill" style="background: #00ff00; width: 95%;"></div></div>
+                        <div class="stat-row">
+                            <span class="stat-label">Armor</span>
+                            <span class="stat-value">40/100</span>
+                        </div>
+                        <div class="stat-bar"><div class="stat-fill" style="background: #ff0000; width: 40%;"></div></div>
+                        <div class="stat-row">
+                            <span class="stat-label">Armament</span>
+                            <span class="stat-value">70/100</span>
+                        </div>
+                        <div class="stat-bar"><div class="stat-fill" style="background: #ffaa00; width: 70%;"></div></div>
+                        <div class="stat-row">
+                            <span class="stat-label">Range</span>
+                            <span class="stat-value">90/100</span>
+                        </div>
+                        <div class="stat-bar"><div class="stat-fill" style="background: #00ff00; width: 90%;"></div></div>
+                    </div>
+                </div>
+
+                <div class="plane-card" onclick="selectPlane('Interceptor')">
+                    <div class="plane-name">MiG-21 Fishbed</div>
+                    <div class="plane-preview-container" style="width: 200px; height: 100px; margin: 0 auto 1.5rem;"></div>
+                    <div class="stats">
+                        <div class="stat-row">
+                            <span class="stat-label">Speed</span>
+                            <span class="stat-value">90/100</span>
+                        </div>
+                        <div class="stat-bar"><div class="stat-fill" style="background: #00ff00; width: 90%;"></div></div>
+                        <div class="stat-row">
+                            <span class="stat-label">Maneuverability</span>
+                            <span class="stat-value">65/100</span>
+                        </div>
+                        <div class="stat-bar"><div class="stat-fill" style="background: #ffaa00; width: 65%;"></div></div>
+                        <div class="stat-row">
+                            <span class="stat-label">Armor</span>
+                            <span class="stat-value">45/100</span>
+                        </div>
+                        <div class="stat-bar"><div class="stat-fill" style="background: #ff0000; width: 45%;"></div></div>
+                        <div class="stat-row">
+                            <span class="stat-label">Armament</span>
+                            <span class="stat-value">80/100</span>
+                        </div>
+                        <div class="stat-bar"><div class="stat-fill" style="background: #ffaa00; width: 80%;"></div></div>
+                        <div class="stat-row">
+                            <span class="stat-label">Range</span>
+                            <span class="stat-value">60/100</span>
+                        </div>
+                        <div class="stat-bar"><div class="stat-fill" style="background: #ffaa00; width: 60%;"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn" id="start-btn" onclick="startGame()" style="display: none;">Take Flight</button>
+            <p style="margin-top: 1.5rem; color: #aaa; font-size: 0.9rem;">
+                Controls: WASD to Fly | Mouse to Aim | Click to Fire | Shift to Boost
+            </p>
+        </div>
+
+        <!-- HUD -->
+        <div id="hud" class="ui-layer" style="display: none;">
+            <div class="hud-top">
+                <div class="hud-panel">
+                    <div class="hud-label">HEALTH</div>
+                    <div class="hud-value" id="health-display">100%</div>
+                </div>
+                <div class="hud-panel">
+                    <div class="hud-label">SCORE</div>
+                    <div class="hud-value" id="score-display">0</div>
+                </div>
+                <div class="hud-panel damage">
+                    <div class="hud-label">LEVEL</div>
+                    <div class="hud-value" id="level-display">1</div>
+                </div>
+            </div>
+            <div class="crosshair"></div>
+            <div id="controls-hint">
+                WASD: Pitch/Yaw | Mouse: Aim | Click: Fire | Shift: Boost | R: Reload
+            </div>
+        </div>
+
+        <!-- Level Up Notification -->
+        <div id="level-up">LEVEL UP!</div>
+
+        <!-- Game Over Screen -->
+        <div id="game-over-screen" class="ui-layer interactive">
+            <div class="game-over-content">
+                <div class="game-over-title">MISSION FAILED</div>
+                <div class="game-over-stats">
+                    <p>Final Score: <span id="final-score">0</span></p>
+                    <p>Level Reached: <span id="final-level">1</span></p>
+                </div>
+                <button class="btn" onclick="returnToMenu()">Return to Base</button>
+            </div>
+        </div>
+
+        <!-- Blackout Overlay -->
+        <div id="blackout"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // --- Game Constants & Config ---
+        const GAME_CONFIG = {
+            worldSize: 2000,
+            fogDistance: 1500,
+            bulletSpeed: 80,
+            enemyBulletSpeed: 60,
+            playerMaxSpeed: 200,
+            enemyMaxSpeed: 180,
+            turnSpeed: 2.5,
+            boostMultiplier: 1.5,
+            enemySpawnDistance: 800,
+            enemySpawnCountBase: 3,
+            enemySpawnCountMultiplier: 1.5,
+            damagePerShot: 10,
+            enemyDamagePerShot: 5,
+            reloadTime: 1000
+        };
+
+        const PLANE_TYPES = {
+            fighter: {
+                name: "F-22 Raptor",
+                color: 0x6b8c9e,
+                speed: 220,
+                turnRate: 2.8,
+                armor: 100,
+                damage: 15,
+                range: 150,
+                reload: 0.8,
+                maxAmmo: 50,
+                model: 'fighter'
+            },
+            propeller: {
+                name: "P-51 Mustang",
+                color: 0xc0c0c0,
+                speed: 150,
+                turnRate: 3.2,
+                armor: 80,
+                damage: 12,
+                range: 120,
+                reload: 1.2,
+                maxAmmo: 60,
+                model: 'propeller'
+            },
+            interceptor: {
+                name: "MiG-21 Fishbed",
+                color: 0x757575,
+                speed: 210,
+                turnRate: 2.2,
+                armor: 70,
+                damage: 14,
+                range: 130,
+                reload: 1.0,
+                maxAmmo: 45,
+                model: 'interceptor'
+            }
+        };
+
+        // --- Global Variables ---
+        let scene, camera, renderer;
+        let clock, deltaTime;
+        let gameActive = false;
+        let selectedPlane = null;
+        let player, enemies = [], bullets = [], particles = [];
+        let score = 0;
+        let level = 1;
+        let enemiesToSpawn = 0;
+        let lastEnemySpawn = 0;
+        let enemySpawnRate = 3000;
+        let shadowsEnabled = true;
+
+        // Input State
+        const input = {
+            forward: false,
+            backward: false,
+            left: false,
+            right: false,
+            boost: false,
+            mouseDown: false,
+            mouseX: 0,
+            mouseY: 0
+        };
+
+        // --- Initialization ---
+        function init() {
+            const container = document.getElementById('game-container');
+
+            // Scene Setup
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB);
+            scene.fog = new THREE.Fog(0x87CEEB, 100, GAME_CONFIG.fogDistance);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('game-canvas'), antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const sunLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            sunLight.position.set(100, 500, -200);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 2048;
+            sunLight.shadow.mapSize.height = 2048;
+            sunLight.shadow.camera.near = 0.5;
+            sunLight.shadow.camera.far = 1000;
+            sunLight.shadow.camera.left = -500;
+            sunLight.shadow.camera.right = 500;
+            sunLight.shadow.camera.top = 500;
+            sunLight.shadow.camera.bottom = -500;
+            scene.add(sunLight);
+
+            // Ground
+            const groundGeometry = new THREE.PlaneGeometry(GAME_CONFIG.worldSize, GAME_CONFIG.worldSize);
+            const groundMaterial = new THREE.MeshStandardMaterial({
+                color: 0x3a5f0b,
+                roughness: 0.8
+            });
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.position.y = -50;
+            ground.receiveShadow = true;
+            scene.add(ground);
+
+            // Grid for ground reference
+            const gridHelper = new THREE.GridHelper(GAME_CONFIG.worldSize, 50, 0x000000, 0x000000);
+            gridHelper.position.y = -49;
+            gridHelper.material.opacity = 0.1;
+            gridHelper.material.transparent = true;
+            scene.add(gridHelper);
+
+            // Clouds
+            createClouds();
+
+            // Event Listeners
+            window.addEventListener('resize', () => {
+                onWindowResize();
+                // Re-render selection scene on window resize
+                if (selectionScene && selectionPlanes.length > 0) {
+                    const containers = document.querySelectorAll('.plane-preview-container');
+                    containers.forEach(container => {
+                        selectionRenderer.setSize(container.clientWidth, container.clientHeight);
+                        selectionRenderer.render(selectionScene, selectionCamera);
+                    });
+                }
+            });
+            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('keyup', onKeyUp);
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mousedown', () => input.mouseDown = true);
+            document.addEventListener('mouseup', () => input.mouseDown = false);
+
+            // Hide loading screen after short delay
+            setTimeout(() => {
+                document.getElementById('loading-screen').style.display = 'none';
+            }, 1000);
+
+            clock = new THREE.Clock();
+            animate();
+            createSelectionScene();
+            animateSelection();
+            // Initialize with first plane selected
+            selectPlane('fighter');
+        }
+
+        function createClouds() {
+            const cloudGeometry = new THREE.DodecahedronGeometry(1, 0);
+            const cloudMaterial = new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                roughness: 0.9,
+                metalness: 0.1,
+                transparent: true,
+                opacity: 0.8
+            });
+
+            for (let i = 0; i < 50; i++) {
+                const cloud = new THREE.Mesh(cloudGeometry, cloudMaterial);
+                cloud.position.set(
+                    (Math.random() - 0.5) * GAME_CONFIG.worldSize * 0.8,
+                    100 + Math.random() * 300,
+                    (Math.random() - 0.5) * GAME_CONFIG.worldSize * 0.8
+                );
+                const scale = 20 + Math.random() * 60;
+                cloud.scale.set(scale, scale * 0.6, scale * 0.8);
+                cloud.castShadow = false;
+                scene.add(cloud);
+            }
+        }
+
+        // --- Plane Creation for 3D Display ---
+        function createPlaneMesh(planeType) {
+            const planeGroup = new THREE.Group();
+            const color = planeType.color;
+
+            // Scale down for selection screen
+            const scale = 0.3;
+
+            if (planeType.model === 'fighter') {
+                // Fighter Jet - F-22 style
+                const fuselageGeo = new THREE.ConeGeometry(1.5, 12, 8);
+                const fuselageMat = new THREE.MeshStandardMaterial({ color: color });
+                const fuselage = new THREE.Mesh(fuselageGeo, fuselageMat);
+                fuselage.rotation.x = -Math.PI / 2;
+                fuselage.scale.set(scale, scale, scale);
+                planeGroup.add(fuselage);
+
+                const cockpitGeo = new THREE.SphereGeometry(1, 8, 6);
+                const cockpitMat = new THREE.MeshStandardMaterial({ color: 0x3366cc, roughness: 0.2 });
+                const cockpit = new THREE.Mesh(cockpitGeo, cockpitMat);
+                cockpit.position.y = 0.5;
+                cockpit.position.z = 1;
+                cockpit.scale.set(scale, scale, scale);
+                planeGroup.add(cockpit);
+
+                const wingGeo = new THREE.BoxGeometry(8, 0.2, 3);
+                const wingMat = new THREE.MeshStandardMaterial({ color: 0x5a7a8a });
+                const wing = new THREE.Mesh(wingGeo, wingMat);
+                wing.position.z = 2;
+                wing.scale.set(scale, scale, scale);
+                wing.castShadow = true;
+                planeGroup.add(wing);
+
+                const tailGeo = new THREE.BoxGeometry(3, 0.2, 2);
+                const tail = new THREE.Mesh(tailGeo, wingMat);
+                tail.position.z = 5;
+                tail.scale.set(scale, scale, scale);
+                tail.castShadow = true;
+                planeGroup.add(tail);
+
+                const verticalTailGeo = new THREE.BoxGeometry(0.3, 2.5, 2);
+                const verticalTail = new THREE.Mesh(verticalTailGeo, wingMat);
+                verticalTail.position.set(0, 1, 5);
+                verticalTail.scale.set(scale, scale, scale);
+                verticalTail.castShadow = true;
+                planeGroup.add(verticalTail);
+
+                const engineGeo = new THREE.CylinderGeometry(0.8, 0.6, 2, 8);
+                const engineMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+                const engine = new THREE.Mesh(engineGeo, engineMat);
+                engine.rotation.x = -Math.PI / 2;
+                engine.position.z = -6;
+                engine.scale.set(scale, scale, scale);
+                planeGroup.add(engine);
+            } else if (planeType.model === 'propeller') {
+                // Propeller Plane - P-51 style
+                const fuselageGeo = new THREE.CylinderGeometry(1, 1.5, 8, 8);
+                const fuselageMat = new THREE.MeshStandardMaterial({ color: color });
+                const fuselage = new THREE.Mesh(fuselageGeo, fuselageMat);
+                fuselage.rotation.x = -Math.PI / 2;
+                fuselage.scale.set(scale, scale, scale);
+                planeGroup.add(fuselage);
+
+                const cockpitGeo = new THREE.BoxGeometry(1.8, 1.2, 2.5);
+                const cockpitMat = new THREE.MeshStandardMaterial({ color: 0x3366cc, roughness: 0.2 });
+                const cockpit = new THREE.Mesh(cockpitGeo, cockpitMat);
+                cockpit.position.y = 1.5;
+                cockpit.position.z = -0.5;
+                cockpit.scale.set(scale, scale, scale);
+                planeGroup.add(cockpit);
+
+                const wingGeo = new THREE.BoxGeometry(14, 0.3, 3.5);
+                const wingMat = new THREE.MeshStandardMaterial({ color: 0xd3d3d3 });
+                const wing = new THREE.Mesh(wingGeo, wingMat);
+                wing.position.y = 0.8;
+                wing.position.z = 1;
+                wing.scale.set(scale, scale, scale);
+                wing.castShadow = true;
+                planeGroup.add(wing);
+
+                const tailGeo = new THREE.BoxGeometry(4, 0.3, 2);
+                const tail = new THREE.Mesh(tailGeo, wingMat);
+                tail.position.y = 0.8;
+                tail.position.z = 3.5;
+                tail.scale.set(scale, scale, scale);
+                tail.castShadow = true;
+                planeGroup.add(tail);
+
+                const verticalTailGeo = new THREE.BoxGeometry(0.4, 2, 1.5);
+                const verticalTail = new THREE.Mesh(verticalTailGeo, wingMat);
+                verticalTail.position.set(0, 2, 3.5);
+                verticalTail.scale.set(scale, scale, scale);
+                verticalTail.castShadow = true;
+                planeGroup.add(verticalTail);
+
+                const propellerGeo = new THREE.BoxGeometry(4, 0.3, 0.2);
+                const propellerMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+                const propeller = new THREE.Mesh(propellerGeo, propellerMat);
+                propeller.position.z = -4.2;
+                propeller.scale.set(scale, scale, scale);
+                planeGroup.add(propeller);
+
+                const spinnerGeo = new THREE.CylinderGeometry(0.6, 0.6, 1, 8);
+                const spinnerMat = new THREE.MeshStandardMaterial({ color: 0x666666 });
+                const spinner = new THREE.Mesh(spinnerGeo, spinnerMat);
+                spinner.rotation.y = -Math.PI / 2;
+                spinner.position.z = -4.2;
+                spinner.scale.set(scale, scale, scale);
+                planeGroup.add(spinner);
+            } else {
+                // Interceptor - MiG-21 style
+                const fuselageGeo = new THREE.ConeGeometry(1, 10, 6);
+                const fuselageMat = new THREE.MeshStandardMaterial({ color: color });
+                const fuselage = new THREE.Mesh(fuselageGeo, fuselageMat);
+                fuselage.rotation.x = -Math.PI / 2;
+                fuselage.scale.set(scale, scale, scale);
+                planeGroup.add(fuselage);
+
+                const cockpitGeo = new THREE.SphereGeometry(0.8, 8, 6);
+                const cockpitMat = new THREE.MeshStandardMaterial({ color: 0x3366cc, roughness: 0.2 });
+                const cockpit = new THREE.Mesh(cockpitGeo, cockpitMat);
+                cockpit.position.y = 0.5;
+                cockpit.position.z = 0.5;
+                cockpit.scale.set(scale, scale, scale);
+                planeGroup.add(cockpit);
+
+                const wingGeo = new THREE.BoxGeometry(6, 0.2, 2);
+                const wingMat = new THREE.MeshStandardMaterial({ color: 0x606060 });
+                const wing = new THREE.Mesh(wingGeo, wingMat);
+                wing.position.z = 0.5;
+                wing.rotation.x = Math.PI / 4;
+                wing.scale.set(scale, scale, scale);
+                wing.castShadow = true;
+                planeGroup.add(wing);
+
+                const tailGeo = new THREE.BoxGeometry(2.5, 0.2, 1.5);
+                const tail = new THREE.Mesh(tailGeo, wingMat);
+                tail.position.z = 3;
+                tail.rotation.x = Math.PI / 4;
+                tail.scale.set(scale, scale, scale);
+                tail.castShadow = true;
+                planeGroup.add(tail);
+
+                const verticalTailGeo = new THREE.BoxGeometry(0.3, 2, 1.5);
+                const verticalTail = new THREE.Mesh(verticalTailGeo, wingMat);
+                verticalTail.position.set(0, 1, 3);
+                verticalTail.scale.set(scale, scale, scale);
+                verticalTail.castShadow = true;
+                planeGroup.add(verticalTail);
+
+                const engineGeo = new THREE.CylinderGeometry(0.7, 0.5, 1.5, 6);
+                const engineMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+                const engine = new THREE.Mesh(engineGeo, engineMat);
+                engine.rotation.x = -Math.PI / 2;
+                engine.position.z = -5;
+                engine.scale.set(scale, scale, scale);
+                planeGroup.add(engine);
+            }
+
+            return planeGroup;
+        }
+
+        // --- Create Small Plane for Selection Screen ---
+        function createSmallPlaneMesh(planeType) {
+            const smallGroup = new THREE.Group();
+            const color = planeType.color;
+
+            // Scale way down for selection screen
+            const scale = 0.15;
+
+            if (planeType.model === 'fighter') {
+                const fuselageGeo = new THREE.ConeGeometry(1.5, 12, 8);
+                const fuselageMat = new THREE.MeshStandardMaterial({ color: color });
+                const fuselage = new THREE.Mesh(fuselageGeo, fuselageMat);
+                fuselage.rotation.x = -Math.PI / 2;
+                fuselage.scale.set(scale, scale, scale);
+                smallGroup.add(fuselage);
+
+                const cockpitGeo = new THREE.SphereGeometry(1, 8, 6);
+                const cockpitMat = new THREE.MeshStandardMaterial({ color: 0x3366cc, roughness: 0.2 });
+                const cockpit = new THREE.Mesh(cockpitGeo, cockpitMat);
+                cockpit.position.y = 0.5;
+                cockpit.position.z = 1;
+                cockpit.scale.set(scale, scale, scale);
+                smallGroup.add(cockpit);
+
+                const wingGeo = new THREE.BoxGeometry(8, 0.2, 3);
+                const wingMat = new THREE.MeshStandardMaterial({ color: 0x5a7a8a });
+                const wing = new THREE.Mesh(wingGeo, wingMat);
+                wing.position.z = 2;
+                wing.scale.set(scale, scale, scale);
+                smallGroup.add(wing);
+
+                const tailGeo = new THREE.BoxGeometry(3, 0.2, 2);
+                const tail = new THREE.Mesh(tailGeo, wingMat);
+                tail.position.z = 5;
+                tail.scale.set(scale, scale, scale);
+                smallGroup.add(tail);
+
+                const verticalTailGeo = new THREE.BoxGeometry(0.3, 2.5, 2);
+                const verticalTail = new THREE.Mesh(verticalTailGeo, wingMat);
+                verticalTail.position.set(0, 1, 5);
+                verticalTail.scale.set(scale, scale, scale);
+                smallGroup.add(verticalTail);
+            } else if (planeType.model === 'propeller') {
+                const fuselageGeo = new THREE.CylinderGeometry(1, 1.5, 8, 8);
+                const fuselageMat = new THREE.MeshStandardMaterial({ color: color });
+                const fuselage = new THREE.Mesh(fuselageGeo, fuselageMat);
+                fuselage.rotation.x = -Math.PI / 2;
+                fuselage.scale.set(scale, scale, scale);
+                smallGroup.add(fuselage);
+
+                const cockpitGeo = new THREE.BoxGeometry(1.8, 1.2, 2.5);
+                const cockpitMat = new THREE.MeshStandardMaterial({ color: 0x3366cc, roughness: 0.2 });
+                const cockpit = new THREE.Mesh(cockpitGeo, cockpitMat);
+                cockpit.position.y = 1.5;
+                cockpit.position.z = -0.5;
+                cockpit.scale.set(scale, scale, scale);
+                smallGroup.add(cockpit);
+
+                const wingGeo = new THREE.BoxGeometry(14, 0.3, 3.5);
+                const wingMat = new THREE.MeshStandardMaterial({ color: 0xd3d3d3 });
+                const wing = new THREE.Mesh(wingGeo, wingMat);
+                wing.position.y = 0.8;
+                wing.position.z = 1;
+                wing.scale.set(scale, scale, scale);
+                smallGroup.add(wing);
+
+                const tailGeo = new THREE.BoxGeometry(4, 0.3, 2);
+                const tail = new THREE.Mesh(tailGeo, wingMat);
+                tail.position.y = 0.8;
+                tail.position.z = 3.5;
+                tail.scale.set(scale, scale, scale);
+                smallGroup.add(tail);
+
+                const verticalTailGeo = new THREE.BoxGeometry(0.4, 2, 1.5);
+                const verticalTail = new THREE.Mesh(verticalTailGeo, wingMat);
+                verticalTail.position.set(0, 2, 3.5);
+                verticalTail.scale.set(scale, scale, scale);
+                smallGroup.add(verticalTail);
+
+                const propellerGeo = new THREE.BoxGeometry(4, 0.3, 0.2);
+                const propellerMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+                const propeller = new THREE.Mesh(propellerGeo, propellerMat);
+                propeller.position.z = -4.2;
+                propeller.scale.set(scale, scale, scale);
+                smallGroup.add(propeller);
+            } else {
+                const fuselageGeo = new THREE.ConeGeometry(1, 10, 6);
+                const fuselageMat = new THREE.MeshStandardMaterial({ color: color });
+                const fuselage = new THREE.Mesh(fuselageGeo, fuselageMat);
+                fuselage.rotation.x = -Math.PI / 2;
+                fuselage.scale.set(scale, scale, scale);
+                smallGroup.add(fuselage);
+
+                const cockpitGeo = new THREE.SphereGeometry(0.8, 8, 6);
+                const cockpitMat = new THREE.MeshStandardMaterial({ color: 0x3366cc, roughness: 0.2 });
+                const cockpit = new THREE.Mesh(cockpitGeo, cockpitMat);
+                cockpit.position.y = 0.5;
+                cockpit.position.z = 0.5;
+                cockpit.scale.set(scale, scale, scale);
+                smallGroup.add(cockpit);
+
+                const wingGeo = new THREE.BoxGeometry(6, 0.2, 2);
+                const wingMat = new THREE.MeshStandardMaterial({ color: 0x606060 });
+                const wing = new THREE.Mesh(wingGeo, wingMat);
+                wing.position.z = 0.5;
+                wing.rotation.x = Math.PI / 4;
+                wing.scale.set(scale, scale, scale);
+                smallGroup.add(wing);
+
+                const tailGeo = new THREE.BoxGeometry(2.5, 0.2, 1.5);
+                const tail = new THREE.Mesh(tailGeo, wingMat);
+                tail.position.z = 3;
+                tail.rotation.x = Math.PI / 4;
+                tail.scale.set(scale, scale, scale);
+                smallGroup.add(tail);
+
+                const verticalTailGeo = new THREE.BoxGeometry(0.3, 2, 1.5);
+                const verticalTail = new THREE.Mesh(verticalTailGeo, wingMat);
+                verticalTail.position.set(0, 1, 3);
+                verticalTail.scale.set(scale, scale, scale);
+                smallGroup.add(verticalTail);
+            }
+
+            return smallGroup;
+        }
+
+        // --- Player Plane Class ---
+        class PlayerPlane {
+            constructor(planeType) {
+                this.mesh = createPlaneMesh(planeType);
+                this.mesh.position.set(0, 100, 0);
+                this.mesh.castShadow = true;
+                scene.add(this.mesh);
+
+                this.type = planeType;
+                this.speed = planeType.speed;
+                this.maxSpeed = planeType.speed;
+                this.health = planeType.armor;
+                this.maxHealth = planeType.armor;
+                this.damage = planeType.damage;
+                this.range = planeType.range;
+                this.reloadTime = planeType.reload * GAME_CONFIG.reloadTime;
+                this.maxAmmo = planeType.maxAmmo;
+                this.ammo = this.maxAmmo;
+                this.lastShot = 0;
+                this.isDead = false;
+                this.rotation = new THREE.Euler(0, 0, 0, 'YXZ');
+                this.velocity = new THREE.Vector3(0, 0, 0);
+                this.boostActive = false;
+                this.propellerAngle = 0;
+                this.groundLevel = -50;
+            }
+
+            update(dt) {
+                if (this.isDead) {
+                    this.mesh.position.y -= 100 * dt;
+                    this.mesh.rotation.z += 2 * dt;
+                    if (this.mesh.position.y < -60) {
+                        gameOver();
+                    }
+                    return;
+                }
+
+                // Handle Boost
+                if (input.boost && this.ammo > 0) {
+                    this.speed = this.maxSpeed * GAME_CONFIG.boostMultiplier;
+                    this.boostActive = true;
+                } else {
+                    this.speed = this.maxSpeed;
+                    this.boostActive = false;
+                }
+
+                // Movement based on input
+                const moveSpeed = this.speed * dt;
+                const turnSpeed = this.type.turnRate * dt;
+
+                // Pitch (Y-axis rotation for local movement)
+                if (input.forward) {
+                    this.mesh.rotateX(turnSpeed);
+                }
+                if (input.backward) {
+                    this.mesh.rotateX(-turnSpeed);
+                }
+
+                // Yaw (Z-axis for banking/turning)
+                if (input.left) {
+                    this.mesh.rotateZ(turnSpeed);
+                    this.mesh.rotateY(-turnSpeed * 0.5);
+                }
+                if (input.right) {
+                    this.mesh.rotateZ(-turnSpeed);
+                    this.mesh.rotateY(turnSpeed * 0.5);
+                }
+
+                // Move forward
+                const forward = new THREE.Vector3(0, 0, 1);
+                forward.applyQuaternion(this.mesh.quaternion);
+                this.mesh.position.add(forward.multiplyScalar(moveSpeed));
+
+                // Banking effect based on Yaw
+                this.mesh.rotation.z = Math.max(-Math.PI/4, Math.min(Math.PI/4, this.mesh.rotation.z * 0.8));
+
+                // Keep player in bounds
+                const limit = GAME_CONFIG.worldSize / 2 - 100;
+                this.mesh.position.x = Math.max(-limit, Math.min(limit, this.mesh.position.x));
+                this.mesh.position.y = Math.max(this.groundLevel + 5, Math.min(400, this.mesh.position.y));
+                this.mesh.position.z = Math.max(-limit, Math.min(limit, this.mesh.position.z));
+
+                // Ground collision - die if hit ground
+                if (this.mesh.position.y <= this.groundLevel + 5) {
+                    this.isDead = true;
+                }
+
+                // Camera follow
+                const cameraOffset = new THREE.Vector3(0, 15, -40);
+                cameraOffset.applyQuaternion(this.mesh.quaternion);
+                cameraOffset.add(this.mesh.position);
+
+                const targetCamPos = cameraOffset.clone();
+                camera.position.lerp(targetCamPos, 0.1);
+                camera.lookAt(this.mesh.position.clone().add(forward.multiplyScalar(50)));
+
+                // Propeller animation
+                this.propellerAngle += (this.speed / 20) * dt;
+                if (this.type.model === 'propeller') {
+                    this.mesh.children[this.mesh.children.length - 2].rotation.z = this.propellerAngle;
+                    this.mesh.children[this.mesh.children.length - 1].rotation.z = this.propellerAngle;
+                }
+
+                // Update HUD
+                document.getElementById('health-display').innerText = Math.ceil(this.health) + '%';
+                document.getElementById('health-display').style.color = this.health < 30 ? '#ff0000' : '#00ff00';
+                document.getElementById('score-display').innerText = score;
+                document.getElementById('level-display').innerText = level;
+
+                // Shooting
+                if (input.mouseDown && Date.now() - this.lastShot > this.reloadTime && this.ammo > 0) {
+                    shoot(this, true);
+                }
+            }
+
+            takeDamage(amount) {
+                this.health -= amount;
+                createParticles(this.mesh.position, 0xff0000, 5);
+                if (this.health <= 0) {
+                    this.health = 0;
+                    this.isDead = true;
+                }
+            }
+
+            reset(planeType) {
+                this.mesh.position.set(0, 100, 0);
+                this.mesh.rotation.set(0, 0, 0);
+                this.health = planeType.armor;
+                this.maxHealth = planeType.armor;
+                this.ammo = this.maxAmmo;
+                this.isDead = false;
+                this.speed = planeType.speed;
+            }
+        }
+
+        // --- Enemy Plane Class ---
+        class EnemyPlane {
+            constructor() {
+                const planeTypes = Object.values(PLANE_TYPES);
+                this.type = planeTypes[Math.floor(Math.random() * planeTypes.length)];
+                this.mesh = createPlaneMesh(this.type);
+
+                // Spawn position
+                const angle = Math.random() * Math.PI * 2;
+                const distance = GAME_CONFIG.enemySpawnDistance;
+                this.mesh.position.set(
+                    Math.cos(angle) * distance,
+                    100 + Math.random() * 200,
+                    Math.sin(angle) * distance
+                );
+                this.mesh.castShadow = true;
+                scene.add(this.mesh);
+
+                this.speed = this.type.speed * (0.8 + Math.random() * 0.4) * (0.9 + level * 0.05);
+                this.health = this.type.armor * (0.8 + Math.random() * 0.4);
+                this.maxHealth = this.health;
+                this.damage = this.type.damage;
+                this.range = this.type.range;
+                this.lastShot = 0;
+                this.target = null;
+                this.state = 'chasing'; // chasing, attacking, returning
+                this.propellerAngle = 0;
+            }
+
+            update(dt, player) {
+                if (this.health <= 0) return;
+
+                const distanceToPlayer = this.mesh.position.distanceTo(player.mesh.position);
+                const playerDirection = new THREE.Vector3().subVectors(player.mesh.position, this.mesh.position).normalize();
+                const myForward = new THREE.Vector3(0, 0, 1).applyQuaternion(this.mesh.quaternion);
+
+                // AI Logic
+                if (distanceToPlayer < this.range) {
+                    // Attack state
+                    const angleToPlayer = Math.acos(myForward.dot(playerDirection));
+
+                    // Turn towards player
+                    if (angleToPlayer > 0.1) {
+                        const turnDir = new THREE.Vector3().crossVectors(myForward, playerDirection);
+                        if (turnDir.y > 0) {
+                            this.mesh.rotateY(1.5 * dt);
+                            this.mesh.rotateX(-0.5 * dt);
+                        } else {
+                            this.mesh.rotateY(-1.5 * dt);
+                            this.mesh.rotateX(-0.5 * dt);
+                        }
+                    }
+
+                    // Shoot if aligned
+                    if (angleToPlayer < 0.3 && Date.now() - this.lastShot > 2000) {
+                        shoot(this, false);
+                    }
+                } else {
+                    // Chase state - fly towards player
+                    const desiredAngle = Math.atan2(playerDirection.x, playerDirection.z);
+                    const currentAngle = this.mesh.rotation.y;
+                    const angleDiff = desiredAngle - currentAngle;
+
+                    // Normalize angle
+                    const normalizedDiff = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff));
+
+                    if (Math.abs(normalizedDiff) > 0.1) {
+                        this.mesh.rotateY(normalizedDiff * 2 * dt);
+                    }
+
+                    // Adjust pitch
+                    const pitch = player.mesh.position.y - this.mesh.position.y;
+                    if (pitch > 20) {
+                        this.mesh.rotateX(0.5 * dt);
+                    } else if (pitch < -20) {
+                        this.mesh.rotateX(-0.5 * dt);
+                    }
+                }
+
+                // Move forward
+                const forward = new THREE.Vector3(0, 0, 1);
+                forward.applyQuaternion(this.mesh.quaternion);
+                this.mesh.position.add(forward.multiplyScalar(this.speed * dt));
+
+                // Keep in bounds
+                const limit = GAME_CONFIG.worldSize / 2 - 100;
+                if (this.mesh.position.x > limit || this.mesh.position.x < -limit ||
+                    this.mesh.position.z > limit || this.mesh.position.z < -limit ||
+                    this.mesh.position.y > 450 || this.mesh.position.y < 50) {
+                    // Return to spawn area
+                    const angle = Math.atan2(-this.mesh.position.z, -this.mesh.position.x);
+                    this.mesh.rotation.y = angle;
+                }
+
+                // Propeller animation
+                this.propellerAngle += (this.speed / 20) * dt;
+                if (this.type.model === 'propeller') {
+                    this.mesh.children[this.mesh.children.length - 2].rotation.z = this.propellerAngle;
+                    this.mesh.children[this.mesh.children.length - 1].rotation.z = this.propellerAngle;
+                }
+            }
+
+            takeDamage(amount) {
+                this.health -= amount;
+                createParticles(this.mesh.position, 0xffaa00, 3);
+                if (this.health <= 0) {
+                    explode(this.mesh.position);
+                    return true; // Dead
+                }
+                return false;
+            }
+
+            destroy() {
+                scene.remove(this.mesh);
+            }
+        }
+
+        // --- Bullet Class ---
+        class Bullet {
+            constructor(position, direction, owner, isEnemy = false) {
+                this.mesh = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.2, 0.2, 3, 8),
+                    new THREE.MeshBasicMaterial({ color: isEnemy ? 0xff0000 : 0xffff00 })
+                );
+                this.mesh.position.copy(position);
+                this.mesh.quaternion.copy(direction);
+                scene.add(this.mesh);
+
+                this.owner = owner;
+                this.isEnemy = isEnemy;
+                this.speed = isEnemy ? GAME_CONFIG.enemyBulletSpeed : GAME_CONFIG.bulletSpeed;
+                this.life = 3; // seconds
+                this.damage = owner.damage;
+                this.position = position.clone();
+                this.velocity = new THREE.Vector3(0, 0, 1);
+                this.velocity.applyQuaternion(direction);
+                this.velocity.multiplyScalar(this.speed);
+            }
+
+            update(dt) {
+                this.life -= dt;
+
+                // Create trail
+                if (Math.random() > 0.5) {
+                    createParticles(this.mesh.position, this.isEnemy ? 0xff0000 : 0xffff00, 1);
+                }
+
+                this.mesh.position.add(this.velocity.clone().multiplyScalar(dt));
+
+                return this.life > 0;
+            }
+
+            destroy() {
+                scene.remove(this.mesh);
+            }
+        }
+
+        // --- Particle System ---
+        class Particle {
+            constructor(position, color) {
+                const geometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+                const material = new THREE.MeshBasicMaterial({ color: color });
+                this.mesh = new THREE.Mesh(geometry, material);
+                this.mesh.position.copy(position);
+
+                // Random velocity
+                this.velocity = new THREE.Vector3(
+                    (Math.random() - 0.5) * 10,
+                    (Math.random() - 0.5) * 10,
+                    (Math.random() - 0.5) * 10
+                );
+
+                this.life = 1;
+                this.decay = 2 + Math.random();
+                scene.add(this.mesh);
+            }
+
+            update(dt) {
+                this.life -= dt;
+                this.mesh.position.add(this.velocity.clone().multiplyScalar(dt));
+                this.mesh.scale.setScalar(this.life);
+
+                return this.life > 0;
+            }
+
+            destroy() {
+                scene.remove(this.mesh);
+            }
+        }
+
+        function createParticles(position, color, count) {
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle(position, color));
+            }
+        }
+
+        function explode(position) {
+            createParticles(position, 0xff0000, 20);
+            createParticles(position, 0xffaa00, 15);
+        }
+
+        // --- Game Functions ---
+        function shoot(plane, isPlayer) {
+            const bulletPos = plane.mesh.position.clone();
+            const forward = new THREE.Vector3(0, 0, 1);
+            forward.applyQuaternion(plane.mesh.quaternion);
+            bulletPos.add(forward.multiplyScalar(5));
+
+            // Add slight spread
+            const spread = (Math.random() - 0.5) * 0.1;
+            const up = new THREE.Vector3(0, 1, 0);
+            const right = new THREE.Vector3(1, 0, 0);
+            const aim = forward.clone().add(up.multiplyScalar(spread)).normalize();
+
+            bullets.push(new Bullet(bulletPos, aim, plane, !isPlayer));
+
+            plane.lastShot = Date.now();
+            if (plane === player) {
+                player.ammo--;
+                if (player.ammo <= 0) {
+                    // Auto reload
+                    setTimeout(() => {
+                        if (player && !player.isDead) {
+                            player.ammo = player.maxAmmo;
+                            document.getElementById('health-display').innerText = Math.ceil(player.health) + '%';
+                        }
+                    }, 2000);
+                }
+            }
+        }
+
+        function checkCollisions() {
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const bullet = bullets[i];
+                let hit = false;
+
+                // Check player collision
+                if (bullet.isEnemy && !player.isDead) {
+                    const dist = bullet.mesh.position.distanceTo(player.mesh.position);
+                    if (dist < 5) {
+                        player.takeDamage(bullet.damage);
+                        hit = true;
+                    }
+                }
+
+                // Check enemy collisions
+                if (!bullet.isEnemy) {
+                    for (let j = enemies.length - 1; j >= 0; j--) {
+                        const enemy = enemies[j];
+                        if (enemy.health > 0) {
+                            const dist = bullet.mesh.position.distanceTo(enemy.mesh.position);
+                            if (dist < 5) {
+                                const enemyDead = enemy.takeDamage(bullet.damage);
+                                if (enemyDead) {
+                                    score += 100;
+                                    enemies.splice(j, 1);
+                                    enemy.destroy();
+                                    checkLevelUp();
+                                }
+                                hit = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (hit) {
+                    bullets.splice(i, 1);
+                    bullet.destroy();
+                }
+            }
+        }
+
+        function checkLevelUp() {
+            const currentEnemies = enemies.length;
+            if (currentEnemies === 0 && enemiesToSpawn === 0) {
+                level++;
+                score += 500;
+
+                // Level up effect
+                const levelUpEl = document.getElementById('level-up');
+                levelUpEl.style.display = 'block';
+                levelUpEl.innerText = 'LEVEL ' + level;
+
+                setTimeout(() => {
+                    levelUpEl.style.display = 'none';
+                }, 2000);
+
+                // Spawn more enemies
+                spawnEnemies();
+            }
+        }
+
+        function spawnEnemies() {
+            const count = Math.floor(GAME_CONFIG.enemySpawnCountBase + (level - 1) * GAME_CONFIG.enemySpawnCountMultiplier);
+            enemiesToSpawn = count;
+
+            for (let i = 0; i < count; i++) {
+                setTimeout(() => {
+                    if (gameActive && !player.isDead) {
+                        enemies.push(new EnemyPlane());
+                    }
+                }, i * 1000);
+            }
+        }
+
+        function startGame() {
+            if (!selectedPlane) return;
+
+            // Reset game state
+            score = 0;
+            level = 1;
+            enemies = [];
+            bullets = [];
+            particles = [];
+
+            // Clear scene of old entities
+            const oldEntities = [player, ...enemies];
+            oldEntities.forEach(e => {
+                if (e && e.mesh) scene.remove(e.mesh);
+            });
+
+            // Create player
+            player = new PlayerPlane(selectedPlane);
+
+            // Show HUD
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('game-over-screen').style.display = 'none';
+            document.getElementById('hud').style.display = 'flex';
+
+            gameActive = true;
+            spawnEnemies();
+        }
+
+        function gameOver() {
+            gameActive = false;
+            document.getElementById('hud').style.display = 'none';
+
+            // Blackout
+            const blackout = document.getElementById('blackout');
+            blackout.style.opacity = 1;
+
+            setTimeout(() => {
+                document.getElementById('game-over-screen').style.display = 'flex';
+                document.getElementById('final-score').innerText = score;
+                document.getElementById('final-level').innerText = level;
+                blackout.style.opacity = 0;
+            }, 2000);
+        }
+
+        function returnToMenu() {
+            document.getElementById('game-over-screen').style.display = 'none';
+            document.getElementById('start-screen').style.display = 'flex';
+            document.getElementById('start-btn').style.display = 'none';
+
+            // Reset camera
+            camera.position.set(0, 200, 300);
+            camera.lookAt(0, 0, 0);
+        }
+
+        // Selection screen plane scene
+        let selectionScene, selectionCamera, selectionRenderer;
+        let selectionPlanes = [];
+
+        function createSelectionScene() {
+            const container = document.getElementById('game-container');
+
+            selectionScene = new THREE.Scene();
+            selectionScene.background = new THREE.Color(0x1a2a6c);
+
+            selectionCamera = new THREE.PerspectiveCamera(50, 2, 0.1, 100);
+            selectionCamera.position.set(0, 0.5, 3);
+            selectionCamera.lookAt(0, 0, 0);
+
+            selectionRenderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            selectionRenderer.setSize(200, 100);
+            selectionRenderer.setPixelRatio(window.devicePixelRatio);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+            selectionScene.add(ambientLight);
+
+            const sunLight = new THREE.DirectionalLight(0xffffff, 0.6);
+            sunLight.position.set(5, 10, 5);
+            selectionScene.add(sunLight);
+        }
+
+        function selectPlane(planeType) {
+            selectedPlane = PLANE_TYPES[planeType];
+            document.getElementById('start-btn').style.display = 'inline-block';
+
+            // Update card styles
+            document.querySelectorAll('.plane-card').forEach(card => {
+                card.style.borderColor = '#ffd700';
+                card.style.opacity = '0.7';
+            });
+
+            // Find the clicked card and highlight it
+            const cards = document.querySelectorAll('.plane-card');
+            if (planeType === 'fighter') cards[0].style.borderColor = '#00ff00';
+            if (planeType === 'propeller') cards[1].style.borderColor = '#00ff00';
+            if (planeType === 'interceptor') cards[2].style.borderColor = '#00ff00';
+
+            // Update selection preview
+            updateSelectionPreview(planeType);
+        }
+
+        function updateSelectionPreview(planeType) {
+            // Remove existing planes
+            selectionPlanes.forEach(p => selectionScene.remove(p));
+            selectionPlanes = [];
+
+            // Create new plane
+            const planeTypeConfig = PLANE_TYPES[planeType];
+            const smallPlane = createSmallPlaneMesh(planeTypeConfig);
+
+            // Add to selection scene
+            selectionScene.add(smallPlane);
+            selectionPlanes.push(smallPlane);
+
+            // Render to all preview containers
+            const containers = document.querySelectorAll('.plane-preview-container');
+            containers.forEach(container => {
+                // Set canvas dimensions to match container
+                selectionRenderer.setSize(container.clientWidth, container.clientHeight);
+                // Clear and add fresh canvas
+                container.innerHTML = '';
+                container.appendChild(selectionRenderer.domElement);
+                // Render to the canvas
+                selectionRenderer.render(selectionScene, selectionCamera);
+            });
+        }
+
+        function animateSelection() {
+            if (selectionScene && selectionPlanes.length > 0) {
+                // Rotate planes slowly
+                selectionPlanes.forEach(plane => {
+                    plane.rotation.y += 0.01;
+                    plane.rotation.x = Math.sin(Date.now() * 0.001) * 0.1;
+                });
+
+                // Render to preview containers
+                const containers = document.querySelectorAll('.plane-preview-container');
+                containers.forEach(container => {
+                    // Only render if container still has canvas
+                    if (container.children.length > 0 && container.children[0].tagName === 'CANVAS') {
+                        const canvas = container.children[0];
+                        selectionRenderer.setSize(canvas.clientWidth, canvas.clientHeight);
+                        selectionRenderer.render(selectionScene, selectionCamera);
+                    }
+                });
+            }
+            requestAnimationFrame(animateSelection);
+        }
+
+        // --- Input Handling ---
+        function onKeyDown(e) {
+            switch(e.code) {
+                case 'KeyW': input.forward = true; break;
+                case 'KeyS': input.backward = true; break;
+                case 'KeyA': input.left = true; break;
+                case 'KeyD': input.right = true; break;
+                case 'ShiftLeft': input.boost = true; break;
+                case 'KeyR': if (player) player.ammo = player.maxAmmo; break;
+            }
+        }
+
+        function onKeyUp(e) {
+            switch(e.code) {
+                case 'KeyW': input.forward = false; break;
+                case 'KeyS': input.backward = false; break;
+                case 'KeyA': input.left = false; break;
+                case 'KeyD': input.right = false; break;
+                case 'ShiftLeft': input.boost = false; break;
+            }
+        }
+
+        function onMouseMove(e) {
+            // Mouse look - very low sensitivity
+            if (player && !player.isDead) {
+                const sensitivity = 0.0002;
+                const x = (e.clientX - window.innerWidth / 2) * sensitivity;
+                const y = (e.clientY - window.innerHeight / 2) * sensitivity;
+
+                // Apply pitch and yaw
+                player.mesh.rotateX(-y * 0.5);
+                player.mesh.rotateY(-x * 0.5);
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+
+            // Update selection scene camera
+            if (selectionCamera) {
+                const containers = document.querySelectorAll('.plane-preview-container');
+                if (containers.length > 0) {
+                    const width = containers[0].clientWidth;
+                    const height = containers[0].clientHeight;
+                    selectionCamera.aspect = width / height;
+                    selectionCamera.updateProjectionMatrix();
+                }
+            }
+
+            // Re-render selection scene on window resize
+            if (selectionScene && selectionPlanes.length > 0) {
+                const containers = document.querySelectorAll('.plane-preview-container');
+                containers.forEach(container => {
+                    if (container.children.length > 0 && container.children[0].tagName === 'CANVAS') {
+                        const canvas = container.children[0];
+                        selectionRenderer.setSize(canvas.clientWidth, canvas.clientHeight);
+                        selectionRenderer.render(selectionScene, selectionCamera);
+                    }
+                });
+            }
+        }
+
+        // --- Main Game Loop ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const dt = Math.min(clock.getDelta(), 0.1); // Cap dt
+
+            if (gameActive && player) {
+                player.update(dt);
+
+                // Update enemies
+                enemies.forEach(enemy => enemy.update(dt, player));
+
+                // Update bullets
+                for (let i = bullets.length - 1; i >= 0; i--) {
+                    if (!bullets[i].update(dt)) {
+                        bullets[i].destroy();
+                        bullets.splice(i, 1);
+                    }
+                }
+
+                // Update particles
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    if (!particles[i].update(dt)) {
+                        particles[i].destroy();
+                        particles.splice(i, 1);
+                    }
+                }
+
+                checkCollisions();
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // Initialize when page loads
+        window.onload = init;
+    </script>
+</body>
+</html>

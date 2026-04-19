@@ -1,0 +1,529 @@
+<!---
+Gemma 31b-8bit MLX community
+Prompt processing  146.2 tok/s // Token generation  8.5 tok/s
+Took 2 prompts for final result
+2nd prompt: you have created a flight combat game @flight_sim.html . Can you add more textures to the ground map? There's also no way to know how many enemies
+  are left.
+
+Notes:
+Just like the 26b MoE Gemma 4, the game was playable from the very beginning. These models tend to go for a minimalist, not flashy kind of design. They also seem to get the job done 
+in the smallest amount of tokens and lines which is a positive. The game didn't really have any bugs but it was very naked, no minimap, no sound, no special features, just bare minimum. 
+This is okay, I guess I've been spoiled by how Qwen would take it upon itself to add more features. The controls were fine, plane models were different, the plane selection screen
+was a bar chart for stats rather than stars as we had in the Gemma 26b. Overall, a strong result which I am sure would be better with a few more prompts. 
+514 lines of code 
+ThreeJS,  JavaScript
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkyCombat 3D</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        canvas { display: block; }
+
+        #ui-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        #start-screen {
+            pointer-events: auto;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            border: 2px solid #444;
+        }
+
+        .plane-options {
+            display: flex;
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .plane-card {
+            background: #222;
+            padding: 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            width: 180px;
+            transition: transform 0.2s, border 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .plane-card:hover {
+            transform: translateY(-10px);
+            border-color: #00ffcc;
+        }
+
+        .plane-card h3 { margin-top: 0; }
+
+        .stat-row {
+            margin: 10px 0;
+            text-align: left;
+            font-size: 12px;
+        }
+
+        .stat-bar-bg {
+            background: #444;
+            height: 8px;
+            width: 100%;
+            border-radius: 4px;
+            margin-top: 4px;
+        }
+
+        .stat-bar-fill {
+            background: #00ffcc;
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s;
+        }
+
+        #hud {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: none;
+            pointer-events: none;
+        }
+
+        .hud-element {
+            position: absolute;
+            color: #00ffcc;
+            font-family: monospace;
+            font-size: 20px;
+        }
+
+        #health-bar-container {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            height: 20px;
+            background: rgba(0,0,0,0.5);
+            border: 2px solid #00ffcc;
+            position: absolute;
+        }
+
+        #health-fill {
+            width: 100%;
+            height: 100%;
+            background: #00ffcc;
+            transition: width 0.2s;
+        }
+
+        #crosshair {
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px; height: 40px;
+            border: 2px solid #00ffcc;
+            border-radius: 50%;
+            position: absolute;
+        }
+        #crosshair::before, #crosshair::after {
+            content: ''; position: absolute; background: #00ffcc;
+        }
+        #crosshair::before { top: 50%; left: -10px; width: 60px; height: 2px; transform: translateY(-50%); }
+        #crosshair::after { left: 50%; top: -10px; height: 60px; width: 2px; transform: translateX(-50%); }
+
+        #black-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: black;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 1s;
+            z-index: 100;
+        }
+
+        #level-text {
+            position: absolute;
+            top: 20px; right: 20px;
+            font-size: 30px;
+        }
+
+        #enemy-count {
+            position: absolute;
+            top: 20px; left: 20px;
+            font-size: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div id="black-screen"></div>
+    <div id="ui-layer">
+        <div id="start-screen">
+            <h1>SKYCOMBAT 3D</h1>
+            <p>Select Your Aircraft</p>
+            <div class="plane-options">
+                <div class="plane-card" onclick="startGame('jet')">
+                    <h3>Fighter Jet</h3>
+                    <div class="stat-row">Speed <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: 95%"></div></div></div>
+                    <div class="stat-row">Agility <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: 60%"></div></div></div>
+                    <div class="stat-row">Hull <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: 40%"></div></div></div>
+                </div>
+                <div class="plane-card" onclick="startGame('prop')">
+                    <h3>Prop Plane</h3>
+                    <div class="stat-row">Speed <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: 60%"></div></div></div>
+                    <div class="stat-row">Agility <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: 80%"></div></div></div>
+                    <div class="stat-row">Hull <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: 60%"></div></div></div>
+                </div>
+                <div class="plane-card" onclick="startGame('biplane')">
+                    <h3>Vintage Biplane</h3>
+                    <div class="stat-row">Speed <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: 30%"></div></div></div>
+                    <div class="stat-row">Agility <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: 100%"></div></div></div>
+                    <div class="stat-row">Hull <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: 90%"></div></div></div>
+                </div>
+            </div>
+            <p style="margin-top: 30px; font-size: 14px; color: #aaa;">Controls: WASD (Pitch/Roll), Q/E (Yaw), Space (Fire)</p>
+        </div>
+        <div id="hud">
+            <div id="crosshair"></div>
+            <div id="level-text" class="hud-element">Level: 1</div>
+            <div id="enemy-count" class="hud-element">Enemies: 0</div>
+            <div id="health-bar-container">
+                <div id="health-fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+    <script>
+        const PLANE_STATS = {
+            jet: { speed: 1.5, agility: 0.03, health: 100, color: 0x888888 },
+            prop: { speed: 1.0, agility: 0.05, health: 150, color: 0xccaa00 },
+            biplane: { speed: 0.6, agility: 0.08, health: 200, color: 0xaa4400 }
+        };
+
+        let scene, camera, renderer, player, clock;
+        let enemies = [];
+        let bullets = [];
+        let gameState = 'START';
+        let currentLevel = 1;
+        let playerStats = {};
+        let playerHealth = 0;
+        let controls = { w: false, a: false, s: false, d: false, q: false, e: false, space: false };
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87ceeb); // Sky blue
+            scene.fog = new THREE.Fog(0x87ceeb, 100, 1000);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const sunLight = new THREE.DirectionalLight(0xffffff, 1);
+            sunLight.position.set(100, 200, 100);
+            scene.add(sunLight);
+
+            // Ground
+            const groundGeo = new THREE.PlaneGeometry(10000, 10000);
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#3a5f0b';
+            ctx.fillRect(0, 0, 512, 512);
+            for(let i=0; i<2000; i++) {
+                ctx.fillStyle = Math.random() > 0.5 ? '#4a6f1b' : '#2a4f0a';
+                ctx.beginPath();
+                ctx.arc(Math.random()*512, Math.random()*512, Math.random()*5+2, 0, Math.PI*2);
+                ctx.fill();
+            }
+            const groundTexture = new THREE.CanvasTexture(canvas);
+            groundTexture.wrapS = THREE.RepeatWrapping;
+            groundTexture.wrapT = THREE.RepeatWrapping;
+            groundTexture.repeat.set(20, 20);
+            const groundMat = new THREE.MeshLambertMaterial({ map: groundTexture });
+            const ground = new THREE.Mesh(groundGeo, groundMat);
+            ground.rotation.x = -Math.PI / 2;
+            ground.position.y = -100;
+            scene.add(ground);
+
+            // Simple clouds
+            for(let i=0; i<50; i++) {
+                const cloudGeo = new THREE.SphereGeometry(Math.random()*20+10, 8, 8);
+                const cloudMat = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
+                const cloud = new THREE.Mesh(cloudGeo, cloudMat);
+                cloud.position.set(Math.random()*2000-1000, Math.random()*200+50, Math.random()*2000-1000);
+                cloud.scale.set(1.5, 0.6, 1);
+                scene.add(cloud);
+            }
+
+            clock = new THREE.Clock();
+            window.addEventListener('resize', onWindowResize);
+            setupControls();
+            animate();
+        }
+
+        function setupControls() {
+            window.addEventListener('keydown', (e) => {
+                const key = e.key.toLowerCase();
+                if (key === 'w') controls.w = true;
+                if (key === 'a') controls.a = true;
+                if (key === 's') controls.s = true;
+                if (key === 'd') controls.d = true;
+                if (key === 'q') controls.q = true;
+                if (key === 'e') controls.e = true;
+                if (key === ' ') controls.space = true;
+            });
+            window.addEventListener('keyup', (e) => {
+                const key = e.key.toLowerCase();
+                if (key === 'w') controls.w = false;
+                if (key === 'a') controls.a = false;
+                if (key === 's') controls.s = false;
+                if (key === 'd') controls.d = false;
+                if (key === 'q') controls.q = false;
+                if (key === 'e') controls.e = false;
+                if (key === ' ') controls.space = false;
+            });
+        }
+
+        function createPlane(stats, isEnemy = false) {
+            const group = new THREE.Group();
+
+            // Fuselage
+            const bodyGeo = new THREE.BoxGeometry(0.5, 0.5, 3);
+            const bodyMat = new THREE.MeshLambertMaterial({ color: stats.color });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            group.add(body);
+
+            // Wings
+            const wingGeo = new THREE.BoxGeometry(4, 0.1, 1);
+            const wing = new THREE.Mesh(wingGeo, bodyMat);
+            wing.position.z = 0.2;
+            group.add(wing);
+
+            // Tail
+            const tailGeo = new THREE.BoxGeometry(1, 0.1, 0.5);
+            const tail = new THREE.Mesh(tailGeo, bodyMat);
+            tail.position.z = -1.3;
+            group.add(tail);
+
+            const finGeo = new THREE.BoxGeometry(0.1, 0.5, 0.5);
+            const fin = new THREE.Mesh(finGeo, bodyMat);
+            fin.position.set(0, 0.3, -1.3);
+            group.add(fin);
+
+            group.userData = {
+                health: stats.health,
+                maxHealth: stats.health,
+                stats: stats
+            };
+            return group;
+        }
+
+        function startGame(type) {
+            playerStats = PLANE_STATS[type];
+            playerHealth = playerStats.health;
+
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('hud').style.display = 'block';
+
+            player = createPlane(playerStats);
+            scene.add(player);
+
+            spawnEnemies();
+            gameState = 'PLAYING';
+        }
+
+        function spawnEnemies() {
+            enemies.forEach(e => scene.remove(e));
+            enemies = [];
+
+            const count = 2 + currentLevel;
+            for(let i=0; i<count; i++) {
+                const type = Object.keys(PLANE_STATS)[Math.floor(Math.random()*3)];
+                const enemy = createPlane(PLANE_STATS[type], true);
+                enemy.position.set(
+                    Math.random()*400-200,
+                    Math.random()*100+50,
+                    Math.random()*400-200
+                );
+                enemy.rotation.y = Math.random() * Math.PI * 2;
+                scene.add(enemy);
+                enemies.push(enemy);
+            }
+            document.getElementById('level-text').innerText = `Level: ${currentLevel}`;
+            updateEnemyCount();
+        }
+
+        function fireBullet(owner) {
+            const geo = new THREE.SphereGeometry(0.1, 4, 4);
+            const mat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+            const bullet = new THREE.Mesh(geo, mat);
+
+            bullet.position.copy(owner.position);
+            bullet.quaternion.copy(owner.quaternion);
+
+            const direction = new THREE.Vector3(0, 0, 1).applyQuaternion(owner.quaternion);
+            bullet.userData = {
+                velocity: direction.multiplyScalar(5),
+                life: 100,
+                owner: owner
+            };
+
+            scene.add(bullet);
+            bullets.push(bullet);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function updatePlayer(delta) {
+            // Rotation
+            if (controls.w) player.rotateX(playerStats.agility);
+            if (controls.s) player.rotateX(-playerStats.agility);
+            if (controls.a) player.rotateZ(playerStats.agility * 1.5);
+            if (controls.d) player.rotateZ(-playerStats.agility * 1.5);
+            if (controls.q) player.rotateY(playerStats.agility);
+            if (controls.e) player.rotateY(-playerStats.agility);
+
+            // Movement
+            const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(player.quaternion);
+            player.position.add(forward.multiplyScalar(playerStats.speed));
+
+            // Bounds
+            if (player.position.y < -95) {
+                triggerDeath();
+            }
+
+            // Camera
+            const camOffset = new THREE.Vector3(0, 2, -8).applyQuaternion(player.quaternion);
+            camera.position.lerp(player.position.clone().add(camOffset), 0.1);
+            camera.lookAt(player.position);
+
+            if (controls.space && Math.random() > 0.8) {
+                fireBullet(player);
+            }
+        }
+
+        function updateEnemies(delta) {
+            enemies.forEach(enemy => {
+                // Simple AI: Look at player and move forward
+                const targetPos = player.position.clone();
+                const lookTarget = new THREE.Vector3(0,0,1).applyQuaternion(enemy.quaternion);
+                const toPlayer = targetPos.sub(enemy.position).normalize();
+
+                // Smooth rotation towards player
+                enemy.quaternion.slerp(
+                    new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,1), toPlayer),
+                    delta * 0.5
+                );
+
+                const forward = new THREE.Vector3(0,0,1).applyQuaternion(enemy.quaternion);
+                enemy.position.add(forward.multiplyScalar(enemy.userData.stats.speed * (1 + currentLevel * 0.1)));
+
+                if (Math.random() > 0.98) {
+                    fireBullet(enemy);
+                }
+            });
+        }
+
+        function updateBullets(delta) {
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const b = bullets[i];
+                b.position.add(b.userData.velocity);
+                b.userData.life--;
+
+                if (b.userData.life <= 0) {
+                    scene.remove(b);
+                    bullets.splice(i, 1);
+                    continue;
+                }
+
+                // Collision check
+                if (b.userData.owner === player) {
+                    enemies.forEach((enemy, idx) => {
+                        if (b.position.distanceTo(enemy.position) < 3) {
+                            enemy.userData.health -= 20;
+                            b.userData.life = 0;
+                            if (enemy.userData.health <= 0) {
+                                scene.remove(enemy);
+                                enemies.splice(idx, 1);
+                                updateEnemyCount();
+                            }
+                        }
+                    });
+                } else {
+                    if (b.position.distanceTo(player.position) < 2) {
+                        playerHealth -= 10;
+                        b.userData.life = 0;
+                        updateHUD();
+                        if (playerHealth <= 0) triggerDeath();
+                    }
+                }
+            }
+        }
+
+        function updateHUD() {
+            const fill = document.getElementById('health-fill');
+            const pct = Math.max(0, (playerHealth / playerStats.health) * 100);
+            fill.style.width = pct + '%';
+            updateEnemyCount();
+        }
+
+        function updateEnemyCount() {
+            document.getElementById('enemy-count').innerText = `Enemies: ${enemies.length}`;
+        }
+
+        function triggerDeath() {
+            if (gameState === 'DEAD') return;
+            gameState = 'DEAD';
+
+            // Plane becomes uncontrollable
+            player.userData.stats.speed = 0.2;
+            player.userData.stats.agility = 0;
+
+            // Force nose dive
+            const dive = new THREE.Vector3(0, -1, 1).applyQuaternion(player.quaternion);
+
+            setTimeout(() => {
+                const black = document.getElementById('black-screen');
+                black.style.opacity = '1';
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
+            }, 1000);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+
+            if (gameState === 'PLAYING' || gameState === 'DEAD') {
+                updatePlayer(delta);
+                if (gameState === 'PLAYING') {
+                    updateEnemies(delta);
+                }
+                updateBullets(delta);
+
+                if (gameState === 'PLAYING' && enemies.length === 0) {
+                    currentLevel++;
+                    spawnEnemies();
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        init();
+    </script>
+</body>
+</html>

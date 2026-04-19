@@ -1,0 +1,621 @@
+<!---
+Gemma-4-26b-a4b-it-8bit-MLX
+Prompt processing 507 tok/s // Token generation 58.3 tok/s
+Took 3 prompts for the final result. 
+2nd prompt: the fighter plane and the prop plane still share the same model. The prop plane does not have a propeller.  The enemies do not seem to be engaging me.
+3rd prompt: You have created a flight combat simulator 'flight_simulator.html'. It's a good result however, there are no enemies in sight to fight. All the
+planes share the same 3d model, only the colour is different.
+
+Notes:
+This model provided a very solid gameplay from the first try, no camera issues, very good controls, perfect shooting traces and even death logic. 
+The plane models were the same initially but this was quickly fixed with the second prompt (partially), 3rd prompt added a propeller to the propeller plane. 
+The drone is visually smaller and kinda funny, it was a nice touch. The fog effect that gives the impression that the map is infinite is also a nice touch, it may be fog or it may just be rendering less viewing distance, unsure. 
+I like the plane selection screen, it's easy, straight to the point. The planes are also having the speeds expressed in knots which is another nice addition. 
+Overall, a very good result and very little bug fixing. 
+Enemies do seem to run away from you or crash into the ground so that is another bug but nonetheless, solid result. 
+603 lines of code 
+ThreeJS and JavaScript
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flight Combat Simulator</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #000; color: white; }
+        canvas { display: block; }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .menu-container {
+            pointer-events: auto;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 30px;
+            border-radius: 15px;
+            border: 2px solid #444;
+            text-align: center;
+            max-width: 600px;
+        }
+
+        h1 { font-size: 3rem; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 10px #00d4ff; }
+
+        .plane-selection {
+            display: flex;
+            justify-content: space-around;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .plane-card {
+            background: #222;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 150px;
+        }
+
+        .plane-card:hover { border-color: #00d4ff; transform: translateY(-5px); }
+        .plane-card.selected { border-color: #00d4ff; background: #333; box-shadow: 0 0 15px #00d4ff; }
+
+        .plane-card h3 { margin: 10px 0; font-size: 1.2rem; }
+        .stats { font-size: 0.8rem; text-align: left; color: #aaa; }
+        .stats div { margin: 5px 0; }
+
+        .btn-start {
+            padding: 15px 40px;
+            font-size: 1.5rem;
+            background: #00d4ff;
+            color: #000;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        .btn-start:hover { background: #008fb3; }
+
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            bottom: 20px;
+            pointer-events: none;
+            display: none;
+        }
+
+        .hud-element {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        #hud-health { top: 20px; left: 20px; width: 200px; }
+        #hud-speed { top: 20px; right: 20px; text-align: right; }
+        #hud-enemies { bottom: 20px; left: 20px; }
+        #hud-ammo { bottom: 20px; right: 20px; text-align: right; }
+
+        .bar-container { width: 100%; height: 10px; background: #444; margin-top: 5px; }
+        #health-bar { height: 100%; background: #00ff00; width: 100%; transition: width 0.3s; }
+
+        #black-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: black;
+            display: none;
+            z-index: 100;
+        }
+
+        .controls-hint {
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="black-screen"></div>
+
+    <div id="ui-layer">
+        <!-- Start Screen -->
+        <div id="start-screen" class="menu-container">
+            <h1>SKY COMBAT</h1>
+            <div class="plane-selection">
+                <div class="plane-card" onclick="selectPlane('jet')" id="card-jet">
+                    <h3>Fighter Jet</h3>
+                    <div classs="stats">
+                        <div>Speed: ★★★★★</div>
+                        <div>Turn: ★★★★☆</div>
+                        <div>Armor: ★★☆☆☆</div>
+                    </div>
+                </div>
+                <div class="plane-card" onclick="selectPlane('prop')" id="card-prop">
+                    <h3>Prop Plane</h3>
+                    <div classs="stats">
+                        <div>Speed: ★★☆☆☆</div>
+                        <div>Turn: ★★★☆☆</div>
+                        <div>Armor: ★★★★★</div>
+                    </div>
+                </div>
+                <div class="plane-card" onclick="selectPlane('drone')" id="card-drone">
+                    <h3>X-Drone</h3>
+                    <div classs="stats">
+                        <div>Speed: ★★★☆☆</div>
+                        <div>Turn: ★★★★★</div>
+                        <div>Armor: ★☆☆☆☆</div>
+                    </div>
+                </div>
+            </div>
+            <button class="btn-start" onclick="startGame()">ENGAGE</button>
+            <div class="controls-hint">
+                WASD/Arrows: Pitch & Roll | Shift/Ctrl: Throttle | Space: Fire
+            </div>
+        </div>
+
+        <!-- HUD -->
+        <div id="hud">
+            <div id="hud-health" class="hud-element">
+                HEALTH
+                <div class="bar-container"><div id="health-bar"></div></div>
+            </div>
+            <div id="hud-speed" class="hud-element">
+                SPEED: <span id="speed-val">0</span> kn
+            </div>
+            <div id="hud-enemies" class="hud-element">
+                ENEMIES: <span id="enemy-count">0</span>
+            </div>
+            <div id="hud-ammo" class="hud-element">
+                AMMO: <span id="ammo-val">∞</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+    <script>
+        // --- Game Constants & State ---
+        const PLANE_TYPES = {
+            jet: { speed: 1.5, turnRate: 0.03, health: 100, color: 0x555555, name: 'Fighter Jet' },
+            prop: { speed: 0.7, turnRate: 0.02, health: 200, color: 0x8B4513, name: 'Propeller Plane' },
+            drone: { speed: 1.0, turnRate: 0.06, health: 50, color: 0x00ff00, name: 'X-Drone' }
+        };
+
+        let gameState = 'START'; // START, PLAYING, GAMEOVER
+        let selectedPlaneType = 'jet';
+        let difficulty = 1;
+        let score = 0;
+
+        // Three.js Globals
+        let scene, camera, renderer, clock;
+        let player, enemies = [], bullets = [], traces = [];
+        let keys = {};
+
+        // --- Initialization ---
+
+        function initThree() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87ceeb); // Sky blue
+            scene.fog = new THREE.Fog(0x87ceeb, 100, 1000);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            document.body.appendChild(renderer.domElement);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const sunLight = new THREE.DirectionalLight(0xffffff, 1);
+            sunLight.position.set(100, 200, 100);
+            sunLight.castShadow = true;
+            scene.add(sunLight);
+
+            // Ground
+            const groundGeo = new THREE.PlaneGeometry(5000, 5000, 50, 50);
+            const groundMat = new THREE.MeshPhongMaterial({
+                color: 0x348C31,
+                wireframe: false,
+                flatShading: true
+            });
+            const ground = new THREE.Mesh(groundGeo, groundMat);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            scene.add(ground);
+
+            // Grid for orientation
+            const grid = new THREE.GridHelper(5000, 100, 0x000000, 0x222222);
+            grid.position.y = 0.1;
+            scene.add(grid);
+
+            clock = new THREE.Clock();
+
+            window.addEventListener('resize', onWindowResize, false);
+            window.addEventListener('keydown', (e) => keys[e.code] = true);
+            window.addEventListener('keyup', (e) => keys[e.code] = false);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function createPlaneMesh(type) {
+            const group = new THREE.Group();
+            
+            // Determine configuration based on whether 'type' is a string (key) or an object (custom)
+            const config = typeof type === 'string' ? PLANE_TYPES[type] : type;
+            const mat = new THREE.MeshPhongMaterial({ color: config.color });
+
+            // --- 1. Fuselage ---
+            let bodyLength = 4;
+            if (config.name === 'X-Drone') bodyLength = 1.5;
+            if (config.name === 'Propeller Plane') bodyLength = 3;
+            
+            const body = new THREE.Mesh(new THREE.BoxGeometry(1, 1, bodyLength), mat);
+            body.castShadow = true;
+            group.add(body);
+
+            // --- 2. Wings ---
+            let wingWidth = 5;
+            if (config.name === 'X-Drone') wingWidth = 2;
+            if (config.name === 'Propeller Plane') wingWidth = 6;
+            
+            const wings = new THREE.Mesh(new THREE.BoxGeometry(wingWidth, 0.1, 1.5), mat);
+            wings.castShadow = true;
+            group.add(wings);
+
+            // --- 3. Tail ---
+            let tailHeight = 1.5;
+            if (config.name === 'X-Drone') tailHeight = 0.5;
+            const tail = new THREE.Mesh(new THREE.BoxGeometry(0.1, tailHeight, 1), mat);
+            tail.position.set(0, tailHeight/2, -(bodyLength/2 - 0.5));
+            group.add(tail);
+
+            // --- 4. Cockpit ---
+            let cockpitSize = 0.4;
+            if (config.name === 'X-Drone') cockpitSize = 0.2;
+            const cockpit = new THREE.Mesh(
+                new THREE.SphereGeometry(cockpitSize, 8, 8), 
+                new THREE.MeshPhongMaterial({ color: 0x00ffff, transparent: true, opacity: 0.6 })
+            );
+            cockpit.position.set(0, 0.4, bodyLength/4);
+            group.add(cockpit);
+
+            // --- 5. Propeller (Only for Prop Planes) ---
+            if (config.name === 'Propeller Plane') {
+                const propGeo = new THREE.BoxGeometry(2, 0.2, 0.1);
+                const propMat = new THREE.MeshPhongMaterial({ color: 0x222222 });
+                const propeller = new THREE.Mesh(propGeo, propMat);
+                // Place at the very front of the fuselage
+                propeller.position.set(0, 0, -(bodyLength / 2) - 0.1);
+                propeller.name = "propeller_blade"; // Name it so we can find it to rotate
+                group.add(propeller);
+            }
+
+            return group;
+        }
+
+
+
+        // --- Game Logic ---
+
+        function selectPlane(type) {
+            selectedPlaneType = type;
+            document.querySelectorAll('.plane-card').forEach(card => card.classList.remove('selected'));
+            document.getElementById(`card-${type}`).classList.add('selected');
+        }
+
+        function startGame() {
+            // Reset state
+            gameState = 'PLAYING';
+            difficulty = 1;
+            score = 0;
+            enemies.forEach(e => scene.remove(e.mesh));
+            enemies = [];
+            bullets.forEach(b => scene.remove(b.mesh));
+            bullets = [];
+            traces.forEach(t => scene.remove(t.line));
+            traces = [];
+
+            // Hide UI
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('hud').style.display = 'block';
+
+            // Setup Player
+            if (player) scene.remove(player.mesh);
+            const config = PLANE_TYPES[selectedPlaneType];
+            player = {
+                mesh: createPlaneMesh(config),
+                config: config,
+                health: config.health,
+                maxHealth: config.health,
+                speed: config.speed,
+                currentSpeed: config.speed,
+                rotation: new THREE.Euler(0, 0, 0),
+                velocity: new THREE.Vector3(0, 0, 0),
+                lastShot: 0
+            };
+            scene.add(player.mesh);
+            player.mesh.position.set(0, 50, 0);
+
+            spawnEnemies();
+        }
+
+        function spawnEnemies() {
+            const count = Math.floor(3 * difficulty); // Increased base count
+            for (let i = 0; i < count; i++) {
+                // Create a unique "Enemy" look by passing a custom object
+                const enemyConfig = { 
+                    color: 0xff0000, // Red enemies are easier to spot!
+                    name: 'Enemy Interceptor' 
+                };
+                const eMesh = createPlaneMesh(enemyConfig);
+
+                // Spawn in a circle around the player's current position
+                const angle = (i / count) * Math.PI * 2;
+                const dist = 300; // Constant radius for initial spawn
+                eMesh.position.set(
+                    player.mesh.position.x + Math.cos(angle) * dist,
+                    player.mesh.position.y + (Math.random() * 40), // Vary height
+                    player.mesh.position.z + Math.sin(angle) * dist
+                );
+
+                scene.add(eMesh);
+                enemies.push({
+                    mesh: eMesh,
+                    health: 50,
+                    config: enemyConfig,
+                    velocity: new THREE.Vector3(0, 0, -1), // Will be overridden by AI
+                    lastShot: 0
+                });
+            }
+            document.getElementById('enemy-count').innerText = enemies.length;
+        }
+
+
+        function shoot(shooter) {
+            const now = Date.now();
+            if (now - shooter.lastShot < 200) return;
+            shooter.lastShot = now;
+
+            // Direction from mesh forward
+            const direction = new THREE.Vector3(0, 0, -1);
+            direction.applyQuaternion(shooter.mesh.quaternion);
+
+            const bulletGeo = new THREE.SphereGeometry(0.2, 4, 4);
+            const bulletMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+            const bulletMesh = new THREE.Mesh(bulletGeo, bulletMat);
+
+            bulletMesh.position.copy(shooter.mesh.position);
+            bulletMesh.quaternion.copy(shooter.mesh.quaternion);
+            scene.add(bulletMesh);
+
+            // Trace (visual effect)
+            const traceGeo = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(0,0,0),
+                new THREE.Vector3(0,0,-2)
+            ]);
+            const traceMat = new THREE.LineBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.5 });
+            const traceLine = new THREE.Line(traceGeo, traceMat);
+            traceLine.position.copy(bulletMesh.position);
+            scene.add(traceLine);
+
+            bullets.push({
+                mesh: bulletMesh,
+                direction: direction,
+                life: 100,
+                owner: shooter,
+                line: traceLine
+            });
+        }
+
+        function handleGameOver() {
+            gameState = 'GAMEOVER';
+            document.getElementById('hud').style.display = 'none';
+
+            // Black screen transition
+            const black = document.getElementById('black-screen');
+            black.style.display = 'block';
+
+            setTimeout(() => {
+                black.style.display = 'none';
+                document.getElementById('start-screen').style.display = 'block';
+                // Reset player mesh if it exists
+                if (player && player.mesh) scene.remove(player.mesh);
+            }, 2000);
+        }
+
+        function updatePlayer(delta) {
+            const config = player.config;
+
+            // Input handling
+            if (keys['KeyW'] || keys['ArrowUp']) player.mesh.rotateX(config.turnRate);
+            if (keys['KeyS'] || keys['ArrowDown']) player.mesh.rotateX(-config.turnRate);
+            if (keys['KeyA'] || keys['ArrowLeft']) player.mesh.rotateZ(config.turnRate);
+            if (keys['KeyD'] || keys['ArrowRight']) player.mesh.rotateZ(-config.turnRate);
+            if (keys['KeyQ']) player.mesh.rotateY(config.turnRate);
+            if (keys['KeyE']) player.mesh.rotateY(-config.turnRate);
+
+            // Throttle
+            if (keys['ShiftLeft']) player.currentSpeed = Math.min(config.speed * 1.5, 2.5);
+            else if (keys['ControlLeft']) player.currentSpeed = Math.max(config.speed * 0.2, 0.1);
+            else player.currentSpeed = config.speed;
+
+            // Movement
+            const forward = new THREE.Vector3(0, 0, -1);
+            forward.applyQuaternion(player.mesh.quaternion);
+            player.mesh.position.addScaledVector(forward, player.currentSpeed);
+
+            // Collision with ground
+            if (player.mesh.position.y <= 0) {
+                player.health = 0;
+            }
+
+            // Combat
+            if (keys['Space']) shoot(player);
+
+            // Camera Follow
+            const camOffset = new THREE.Vector3(0, 3, 10);
+            camOffset.applyQuaternion(player.mesh.quaternion);
+            camera.position.copy(player.mesh.position).add(camOffset);
+            camera.lookAt(player.mesh.position);
+
+            // UI Update
+            document.getElementById('health-bar').style.width = (player.health / player.maxHealth * 100) + '%';
+            document.getElementById('speed-val').innerText = Math.round(player.currentSpeed * 200);
+
+            if (player.health <= 0) {
+                handleGameOver();
+            }
+        }
+
+            function updateEnemies(delta) {
+                enemies.forEach((enemy, index) => {
+                    // 1. Get target position (Player)
+                    const targetPos = player.mesh.position.clone();
+
+                    // 2. Aggressive Rotation: Turn much faster towards the player
+                    const targetQuaternion = new THREE.Quaternion();
+                    const dummy = new THREE.Object3D();
+                    dummy.position.copy(enemy.mesh.position);
+                    dummy.lookAt(targetPos); 
+                    targetQuaternion.copy(dummy.quaternion);
+                    
+                    // Increased slerp from 0.03 to 0.07 for much "snappier" combat turns
+                    enemy.mesh.quaternion.slerp(targetQuaternion, 0.07);
+
+                    // 3. Movement: Fly forward based on the new rotation
+                    const forward = new THREE.Vector3(0, 0, -1);
+                    forward.applyQuaternion(enemy.mesh.quaternion);
+                    
+                    // Speed up slightly based on difficulty
+                    const moveSpeed = 0.7 + (difficulty * 0.1);
+                    enemy.mesh.position.addScaledVector(forward, moveSpeed);
+
+                    // 4. Combat: Shoot at player when roughly facing them
+                    const dotProduct = new THREE.Vector3(0, 0, -1).applyQuaternion(enemy.mesh.quaternion).dot(
+                        new THREE.Vector3().subVectors(targetPos, enemy.mesh.position).normalize()
+                    );
+                    
+                    // Only shoot if the enemy is actually facing your general direction (dot > 0.8)
+                    if (dotProduct > 0.8 && Math.random() < 0.02 * difficulty) {
+                        shoot(enemy);
+                    }
+
+                    // 5. Cleanup: If they fly way too far away, remove them
+                    if (enemy.mesh.position.distanceTo(player.mesh.position) > 2000) {
+                        scene.remove(enemy.mesh);
+                        enemies.splice(index, 1);
+                    }
+                });
+            }
+
+
+        function updateBullets(delta) {
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const b = bullets[i];
+                const speed = 3.0;
+
+                const moveVec = b.direction.clone().multiplyScalar(speed);
+                b.mesh.position.add(moveVec);
+
+                // Update trace
+                const pos = b.mesh.position;
+                const traceGeo = b.line.geometry;
+                const positions = traceGeo.attributes.position.array;
+                positions[0] = pos.x;
+                positions[1] = pos.y;
+                positions[2] = pos.z;
+                positions[3] = pos.x - moveVec.x;
+                positions[4] = pos.y - moveVec.y;
+                positions[5] = pos.z - moveVec.z;
+                traceGeo.attributes.position.needsUpdate = true;
+
+                b.life -= 1;
+
+                // Collision Detection
+                if (b.owner === player) {
+                    // Check enemy hits
+                    for (let j = enemies.length - 1; j >= 0; j--) {
+                        const e = enemies[j];
+                        if (b.mesh.position.distanceTo(e.mesh.position) < 3) {
+                            e.health -= 25;
+                            b.life = 0; // Destroy bullet
+                            if (e.health <= 0) {
+                                scene.remove(e.mesh);
+                                enemies.splice(j, 1);
+                                score++;
+                                document.getElementById('enemy-count').innerText = enemies.length;
+
+                                // Level up
+                                if (enemies.length === 0) {
+                                    difficulty += 0.5;
+                                    spawnEnemies();
+                                }
+                            }
+                            break;
+                        }
+                    }
+                } else {
+                    // Check player hits
+                    if (b.mesh.position.distanceTo(player.mesh.position) < 2) {
+                        player.health -= 10;
+                        b.life = 0;
+                    }
+                }
+
+                if (b.life <= 0) {
+                    scene.remove(b.mesh);
+                    scene.remove(b.line);
+                    bullets.splice(i, 1);
+                }
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+
+            if (gameState === 'PLAYING') {
+                updatePlayer(delta);
+                updateEnemies(delta);
+                updateBullets(delta);
+                scene.traverse(obj => {
+                    if (obj.name === "propeller_blade") obj.rotation.z += 0.5;
+                });
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // --- Start ---
+
+        initThree();
+        selectPlane('jet');
+        animate();
+
+    </script>
+</body>
+</html>

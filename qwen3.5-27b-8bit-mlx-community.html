@@ -1,0 +1,625 @@
+<!---
+Qwen3.5-27b-8bit-MLX community
+Prompt processing 153.1 tok/s // Token generation 10.5 tok/s
+Took 3 prompts for the final result. 
+2nd prompt: the game fails to launch, debug text developer console: [16 lines]
+3rd prompt: when you spawn, the camera seems to be spinning extremely fast, the plane is uncontrollable and it's falling out of the sky. The game is
+  unplayable.
+
+Notes:
+This model has had a very similar aesthetic to Qwopus, it is the same model after all the only difference being the 
+distil on Qwopus. It did not have the sound as the Qwopus model did, the controls were pretty bad. Overall, I was expecting more from this model. 
+I would say the 35b did better than this model and that the Qwopus 27b did better than both of them. 
+From the 3.5 family, the Qwopus takes the crown. 
+ThreeJS and JavaScript
+609 lines of code 
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sky Dominator - 3D Flight Combat Simulator</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { overflow: hidden; background: #000; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        #gameCanvas { display: block; width: 100vw; height: 100vh; }
+        #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        #startScreen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            pointer-events: auto; z-index: 100;
+        }
+        #startScreen.hidden { display: none; }
+        .title { font-size: 60px; font-weight: bold; color: #e94560; text-shadow: 0 0 20px #e94560; margin-bottom: 10px; letter-spacing: 5px; text-transform: uppercase; }
+        .subtitle { font-size: 18px; color: #a0a0a0; margin-bottom: 40px; letter-spacing: 3px; }
+        .planeSelection { display: flex; gap: 25px; margin-bottom: 35px; flex-wrap: wrap; justify-content: center; }
+        .planeCard {
+            background: rgba(255,255,255,0.05); border: 2px solid rgba(233,69,96,0.3);
+            border-radius: 12px; padding: 20px; width: 200px; cursor: pointer;
+            transition: all 0.3s ease; pointer-events: auto;
+        }
+        .planeCard:hover { transform: translateY(-8px); border-color: #e94560; box-shadow: 0 8px 30px rgba(233,69,96,0.4); }
+        .planeCard.selected { border-color: #e94560; box-shadow: 0 0 25px rgba(233,69,96,0.6); background: rgba(233,69,96,0.1); }
+        .planeCard .name { font-size: 18px; font-weight: bold; color: #fff; margin-bottom: 12px; text-align: center; }
+        .planeCard .icon { font-size: 50px; text-align: center; margin-bottom: 12px; }
+        .statBar { display: flex; align-items: center; margin: 6px 0; }
+        .statBar .label { width: 65px; font-size: 11px; color: #888; }
+        .statBar .bar { flex: 1; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
+        .statBar .fill { height: 100%; border-radius: 3px; }
+        .startBtn {
+            background: linear-gradient(45deg, #e94560, #ff6b6b); border: none; color: #fff;
+            font-size: 20px; font-weight: bold; padding: 12px 50px; border-radius: 25px;
+            cursor: pointer; text-transform: uppercase; letter-spacing: 2px;
+            transition: all 0.3s ease; pointer-events: auto;
+        }
+        .startBtn:hover { transform: scale(1.05); box-shadow: 0 0 25px rgba(233,69,96,0.6); }
+        .controls { margin-top: 35px; color: #666; font-size: 13px; text-align: center; line-height: 1.7; }
+        #hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none; }
+        #hud.visible { display: block; }
+        .hud-top { position: absolute; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; }
+        .hud-left, .hud-right { background: rgba(0,0,0,0.6); border: 1px solid rgba(233,69,96,0.5); border-radius: 8px; padding: 12px; }
+        .hud-value { font-size: 20px; color: #e94560; font-weight: bold; }
+        .hud-label { font-size: 11px; color: #888; text-transform: uppercase; }
+        .healthBar { width: 160px; height: 16px; background: rgba(0,0,0,0.5); border-radius: 8px; overflow: hidden; margin-top: 8px; }
+        .healthFill { height: 100%; background: linear-gradient(90deg, #ff4444, #e94560); transition: width 0.2s; }
+        .healthFill.low { background: #ff0000; animation: pulse 0.5s infinite alternate; }
+        @keyframes pulse { from { opacity: 1; } to { opacity: 0.5; } }
+        #crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 30px; height: 30px; }
+        #crosshair::before, #crosshair::after { content: ''; position: absolute; background: rgba(255,255,255,0.8); }
+        #crosshair::before { width: 2px; height: 100%; left: 50%; transform: translateX(-50%); }
+        #crosshair::after { height: 2px; width: 100%; top: 50%; transform: translateY(-50%); }
+        #levelInfo { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); text-align: center; }
+        #levelInfo .level { font-size: 26px; color: #e94560; font-weight: bold; }
+        #levelInfo .enemies { font-size: 14px; color: #888; }
+        #blackScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 1000; display: none; }
+        #blackScreen.visible { display: block; }
+        #gameOver { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; display: none; }
+        #gameOver.visible { display: block; }
+        #gameOver .text { font-size: 40px; color: #ff0000; font-weight: bold; text-shadow: 0 0 20px #ff0000; }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="ui">
+        <div id="startScreen">
+            <div class="title">Sky Dominator</div>
+            <div class="subtitle">3D Flight Combat Simulator</div>
+            <div class="planeSelection">
+                <div class="planeCard" data-plane="fighter">
+                    <div class="icon">✈️</div><div class="name">F-16 Falcon</div>
+                    <div class="statBar"><span class="label">SPEED</span><div class="bar"><div class="fill" style="width:95%;background:#00ff88"></div></div></div>
+                    <div class="statBar"><span class="label">MANEUVER</span><div class="bar"><div class="fill" style="width:85%;background:#00ff88"></div></div></div>
+                    <div class="statBar"><span class="label">ARMOR</span><div class="bar"><div class="fill" style="width:50%;background:#ff8800"></div></div></div>
+                    <div class="statBar"><span class="label">FIREPOWER</span><div class="bar"><div class="fill" style="width:80%;background:#ff4444"></div></div></div>
+                    <div class="statBar"><span class="label">CLIMB</span><div class="bar"><div class="fill" style="width:90%;background:#00ff88"></div></div></div>
+                </div>
+                <div class="planeCard" data-plane="propeller">
+                    <div class="icon">🛩️</div><div class="name">P-51 Mustang</div>
+                    <div class="statBar"><span class="label">SPEED</span><div class="bar"><div class="fill" style="width:60%;background:#ff8800"></div></div></div>
+                    <div class="statBar"><span class="label">MANEUVER</span><div class="bar"><div class="fill" style="width:95%;background:#00ff88"></div></div></div>
+                    <div class="statBar"><span class="label">ARMOR</span><div class="bar"><div class="fill" style="width:35%;background:#ff4444"></div></div></div>
+                    <div class="statBar"><span class="label">FIREPOWER</span><div class="bar"><div class="fill" style="width:65%;background:#ff8800"></div></div></div>
+                    <div class="statBar"><span class="label">CLIMB</span><div class="bar"><div class="fill" style="width:65%;background:#ff8800"></div></div></div>
+                </div>
+                <div class="planeCard" data-plane="bomber">
+                    <div class="icon">🛸</div><div class="name">B-17 Fortress</div>
+                    <div class="statBar"><span class="label">SPEED</span><div class="bar"><div class="fill" style="width:35%;background:#ff4444"></div></div></div>
+                    <div class="statBar"><span class="label">MANEUVER</span><div class="bar"><div class="fill" style="width:30%;background:#ff4444"></div></div></div>
+                    <div class="statBar"><span class="label">ARMOR</span><div class="bar"><div class="fill" style="width:95%;background:#00ff88"></div></div></div>
+                    <div class="statBar"><span class="label">FIREPOWER</span><div class="bar"><div class="fill" style="width:90%;background:#00ff88"></div></div></div>
+                    <div class="statBar"><span class="label">CLIMB</span><div class="bar"><div class="fill" style="width:40%;background:#ff8800"></div></div></div>
+                </div>
+            </div>
+            <button class="startBtn">Deploy Mission</button>
+            <div class="controls">
+                <strong>CONTROLS</strong><br>
+                W/S - Pitch | A/D - Roll | Q/E - Yaw | SHIFT - Afterburner | SPACE - Fire | Mouse - Steer
+            </div>
+        </div>
+        <div id="hud">
+            <div class="hud-top">
+                <div class="hud-left">
+                    <div class="hud-label">Health</div>
+                    <div class="healthBar"><div class="healthFill" id="playerHealth"></div></div>
+                    <div style="margin-top:12px"><div class="hud-label">Speed</div><div class="hud-value"><span id="speedValue">0</span> km/h</div></div>
+                    <div><div class="hud-label">Altitude</div><div class="hud-value"><span id="altValue">0</span> m</div></div>
+                </div>
+                <div id="levelInfo"><div class="level">LEVEL <span id="levelNum">1</span></div><div class="enemies">Enemies: <span id="enemyCount">0</span></div></div>
+                <div class="hud-right">
+                    <div class="hud-label">Ammo</div><div class="hud-value"><span id="ammoValue">∞</span></div>
+                    <div style="margin-top:12px"><div class="hud-label">Score</div><div class="hud-value"><span id="scoreValue">0</span></div></div>
+                </div>
+            </div>
+            <div id="crosshair"></div>
+            <div id="gameOver"><div class="text">MISSION FAILED</div></div>
+        </div>
+    </div>
+    <div id="blackScreen"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Game State
+        const GameState = { MENU: 0, PLAYING: 1, DEAD: 2 };
+        let gameState = GameState.MENU;
+        let selectedPlane = 'fighter';
+        let level = 1;
+        let score = 0;
+
+        // Three.js setup
+        const canvas = document.getElementById('gameCanvas');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x87ceeb, 0.0006);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x87ceeb);
+        renderer.shadowMap.enabled = true;
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+        const sunLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        sunLight.position.set(500, 1000, 500);
+        sunLight.castShadow = true;
+        sunLight.shadow.camera.left = -1000; sunLight.shadow.camera.right = 1000;
+        sunLight.shadow.camera.top = 1000; sunLight.shadow.camera.bottom = -1000;
+        scene.add(sunLight);
+
+        // Sky
+        const skyGeo = new THREE.SphereGeometry(2500, 32, 32);
+        const skyMat = new THREE.MeshBasicMaterial({ color: 0x87ceeb, side: THREE.BackSide });
+        scene.add(new THREE.Mesh(skyGeo, skyMat));
+
+        // Ground
+        const groundGeo = new THREE.PlaneGeometry(8000, 8000);
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0x2d5a27 });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = -100;
+        scene.add(ground);
+
+        // Clouds
+        const clouds = [];
+        for (let i = 0; i < 40; i++) {
+            const cloud = new THREE.Mesh(
+                new THREE.BoxGeometry(80 + Math.random()*80, 25 + Math.random()*25, 40 + Math.random()*40),
+                new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 })
+            );
+            cloud.position.set((Math.random()-0.5)*1500, 400 + Math.random()*400, (Math.random()-0.5)*1500);
+            scene.add(cloud);
+            clouds.push(cloud);
+        }
+
+        // Plane specs
+        const planeSpecs = {
+            fighter: { name:'F-16', maxSpeed:220, minSpeed:70, accel:2.5, turnRate:0.03, pitchRate:0.03, yawRate:0.015, health:100, weaponCD:30, bulletSpeed:40, bulletDmg:25 },
+            propeller: { name:'P-51', maxSpeed:140, minSpeed:45, accel:1.0, turnRate:0.04, pitchRate:0.04, yawRate:0.02, health:80, weaponCD:50, bulletSpeed:28, bulletDmg:18 },
+            bomber: { name:'B-17', maxSpeed:90, minSpeed:35, accel:0.5, turnRate:0.01, pitchRate:0.01, yawRate:0.006, health:200, weaponCD:25, bulletSpeed:32, bulletDmg:35 }
+        };
+
+        let playerPlane, playerSpecs, playerHealth = 100, weaponCD = 0, isDead = false;
+        const enemies = [], bullets = [], explosions = [];
+        const keys = {};
+        let afterburner = false;
+
+        // Create plane mesh
+        function createPlane(type, isPlayer) {
+            const group = new THREE.Group();
+            const color = isPlayer ? (type === 'fighter' ? 0x4169e1 : type === 'propeller' ? 0x6b8e23 : 0x8b4513)
+                                   : (type === 'fighter' ? 0xcc0000 : type === 'propeller' ? 0x8b0000 : 0x660000);
+            const mat = new THREE.MeshStandardMaterial({ color });
+
+            if (type === 'fighter') {
+                const fuselage = new THREE.Mesh(new THREE.ConeGeometry(1.8, 18, 8), mat);
+                fuselage.rotation.x = Math.PI / 2;
+                group.add(fuselage);
+                const wings = new THREE.Mesh(new THREE.BoxGeometry(14, 0.3, 3.5), mat);
+                wings.position.set(0, 0, 1.5);
+                group.add(wings);
+                const tail = new THREE.Mesh(new THREE.BoxGeometry(5, 0.25, 1.8), mat);
+                tail.position.set(0, 0, 7);
+                group.add(tail);
+                const vStab = new THREE.Mesh(new THREE.BoxGeometry(0.25, 3.5, 1.8), mat);
+                vStab.position.set(0, 1.8, 7);
+                group.add(vStab);
+                const cockpit = new THREE.Mesh(new THREE.BoxGeometry(1.3, 1.3, 2.5), new THREE.MeshStandardMaterial({color:0x222222}));
+                cockpit.position.set(0, 1.4, 1.5);
+                group.add(cockpit);
+                const glow = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 1.2, 1.8, 8), new THREE.MeshBasicMaterial({color:0xff6600}));
+                glow.rotation.x = Math.PI / 2;
+                glow.position.set(0, 0, 9.5);
+                glow.visible = false;
+                group.add(glow);
+                group.userData.glow = glow;
+            } else if (type === 'propeller') {
+                const fuselage = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.9, 16, 8), mat);
+                fuselage.rotation.x = Math.PI / 2;
+                group.add(fuselage);
+                const wings = new THREE.Mesh(new THREE.BoxGeometry(20, 0.35, 4.5), mat);
+                wings.position.set(0, 0, 3.5);
+                group.add(wings);
+                const tail = new THREE.Mesh(new THREE.BoxGeometry(7, 0.25, 1.8), mat);
+                tail.position.set(0, 0, 9);
+                group.add(tail);
+                const vStab = new THREE.Mesh(new THREE.BoxGeometry(0.25, 3.5, 1.8), mat);
+                vStab.position.set(0, 1.8, 9);
+                group.add(vStab);
+                const cockpit = new THREE.Mesh(new THREE.SphereGeometry(0.9, 8, 8), new THREE.MeshStandardMaterial({color:0x87ceeb}));
+                cockpit.position.set(0, 1.1, 6);
+                group.add(cockpit);
+                const prop = new THREE.Mesh(new THREE.BoxGeometry(5.5, 0.2, 0.4), new THREE.MeshStandardMaterial({color:0x222222}));
+                prop.position.set(0, 0, -8);
+                group.add(prop);
+                group.userData.prop = prop;
+            } else {
+                const fuselage = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 2.2, 22, 8), mat);
+                fuselage.rotation.x = Math.PI / 2;
+                group.add(fuselage);
+                const wings = new THREE.Mesh(new THREE.BoxGeometry(32, 0.45, 7), mat);
+                wings.position.set(0, 0, 4.5);
+                group.add(wings);
+                const engineL = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.1, 7, 8), new THREE.MeshStandardMaterial({color:0x222222}));
+                engineL.rotation.x = Math.PI / 2;
+                engineL.position.set(-11, 0, 4.5);
+                group.add(engineL);
+                const engineR = engineL.clone();
+                engineR.position.set(11, 0, 4.5);
+                group.add(engineR);
+                const tail = new THREE.Mesh(new THREE.BoxGeometry(9, 0.35, 2.5), mat);
+                tail.position.set(0, 0, 12.5);
+                group.add(tail);
+                const vStab = new THREE.Mesh(new THREE.BoxGeometry(0.35, 5, 2.5), mat);
+                vStab.position.set(0, 2.6, 12.5);
+                group.add(vStab);
+            }
+            return group;
+        }
+
+        // Explosion
+        function createExplosion(pos, size = 1) {
+            const mesh = new THREE.Group();
+            for (let i = 0; i < 15 * size; i++) {
+                const p = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.4*size, 0.4*size, 0.4*size),
+                    new THREE.MeshBasicMaterial({ color: Math.random() > 0.5 ? 0xff6600 : 0xffaa00 })
+                );
+                p.position.copy(pos);
+                mesh.add(p);
+                p.userData.vel = new THREE.Vector3((Math.random()-0.5)*2*size, (Math.random()-0.5)*2*size, (Math.random()-0.5)*2*size);
+            }
+            scene.add(mesh);
+            explosions.push({ mesh, age: 0, maxAge: 50 });
+        }
+
+        // Bullet
+        function createBullet(pos, dir, isEnemy) {
+            const bullet = new THREE.Mesh(
+                new THREE.SphereGeometry(isEnemy ? 0.25 : 0.4, 6, 6),
+                new THREE.MeshBasicMaterial({ color: isEnemy ? 0xff0000 : 0x00ff00 })
+            );
+            bullet.position.copy(pos);
+            bullet.userData = { dir: dir.clone().normalize(), isEnemy, damage: isEnemy ? 10 : playerSpecs.bulletDmg, life: 80 };
+            scene.add(bullet);
+            bullets.push(bullet);
+
+            // Tracer
+            const trail = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.08, 0.15, 8, 4),
+                new THREE.MeshBasicMaterial({ color: isEnemy ? 0xff4400 : 0x00ff44, transparent: true, opacity: 0.7 })
+            );
+            trail.rotation.x = Math.PI / 2;
+            trail.position.copy(pos).add(dir.clone().multiplyScalar(4));
+            scene.add(trail);
+            bullet.userData.trail = trail;
+        }
+
+        // Spawn enemies
+        function spawnEnemies() {
+            const count = 3 + level * 2;
+            const types = ['fighter', 'propeller', 'bomber'];
+            for (let i = 0; i < count; i++) {
+                const type = types[Math.floor(Math.random() * types.length)];
+                const enemy = {
+                    mesh: createPlane(type, false),
+                    type, health: planeSpecs[type].health,
+                    state: 'chase', stateTimer: 0, weaponCD: Math.random() * 100
+                };
+                const angle = (i / count) * Math.PI * 2;
+                const dist = 300 + Math.random() * 200;
+                enemy.mesh.position.set(Math.cos(angle)*dist, 200 + Math.random()*300, Math.sin(angle)*dist);
+                enemy.mesh.lookAt(playerPlane.position);
+                scene.add(enemy.mesh);
+                enemies.push(enemy);
+            }
+        }
+
+        // Init game
+        function initGame(planeType) {
+            if (playerPlane) scene.remove(playerPlane);
+            playerSpecs = planeSpecs[planeType];
+            playerHealth = playerSpecs.health;
+            playerPlane = createPlane(planeType, true);
+            playerPlane.position.set(0, 300, 0);
+            playerPlane.rotation.set(0, 0, 0);
+            playerPlane.userData = { speed: playerSpecs.minSpeed };
+            isDead = false;
+            scene.add(playerPlane);
+
+            enemies.forEach(e => scene.remove(e.mesh));
+            enemies.length = 0;
+            bullets.forEach(b => scene.remove(b));
+            bullets.length = 0;
+
+            spawnEnemies();
+            gameState = GameState.PLAYING;
+
+            // Set camera
+            camera.position.set(0, 50, -80);
+            updateHUD();
+        }
+
+        // HUD
+        function updateHUD() {
+            if (!playerPlane) return;
+            const speed = playerPlane.userData.speed || 0;
+            const alt = Math.max(0, playerPlane.position.y + 100);
+            document.getElementById('speedValue').textContent = Math.round(speed * 3.6);
+            document.getElementById('altValue').textContent = Math.round(alt);
+            const hf = document.getElementById('playerHealth');
+            if (hf) {
+                hf.style.width = playerHealth + '%';
+                hf.className = 'healthFill' + (playerHealth < 30 ? ' low' : '');
+            }
+            document.getElementById('levelNum').textContent = level;
+            document.getElementById('enemyCount').textContent = enemies.length;
+            document.getElementById('scoreValue').textContent = score;
+        }
+
+        // Player update
+        function updatePlayer() {
+            if (isDead) {
+                playerPlane.rotation.x -= 0.08;
+                playerPlane.rotation.z += 0.04;
+                playerPlane.position.y -= 1.5;
+                if (playerPlane.position.y < -100) {
+                    createExplosion(playerPlane.position, 2);
+                    setTimeout(showBlackScreen, 100);
+                }
+                return;
+            }
+
+            const specs = playerSpecs;
+            let speed = playerPlane.userData.speed;
+
+            if (afterburner && speed < specs.maxSpeed) speed += specs.accel * 1.5;
+            if (playerPlane.userData.glow) playerPlane.userData.glow.visible = afterburner && speed < specs.maxSpeed;
+
+            // Keyboard
+            if (keys['KeyW']) playerPlane.rotateX(specs.pitchRate);
+            if (keys['KeyS']) playerPlane.rotateX(-specs.pitchRate);
+            if (keys['KeyA']) playerPlane.rotateZ(specs.turnRate);
+            if (keys['KeyD']) playerPlane.rotateZ(-specs.turnRate);
+            if (keys['KeyQ']) playerPlane.rotateY(specs.yawRate);
+            if (keys['KeyE']) playerPlane.rotateY(-specs.yawRate);
+
+            // Mouse steering (target-based)
+            const targetRoll = (mouseX - 0.5) * 0.4;
+            const targetPitch = (mouseY - 0.5) * 0.4;
+            const q = playerPlane.quaternion;
+            const currentRoll = Math.asin(2 * (q.x * q.z + q.w * q.y)) * 2;
+            const currentPitch = Math.asin(2 * (q.w * q.z - q.x * q.y)) * 2;
+            playerPlane.rotation.z += (targetRoll - currentRoll) * 0.08;
+            playerPlane.rotation.x += (targetPitch - currentPitch) * 0.08;
+
+            // Clamp
+            playerPlane.rotation.x = Math.max(-Math.PI/3, Math.min(Math.PI/3, playerPlane.rotation.x));
+            playerPlane.rotation.z = Math.max(-Math.PI/3, Math.min(Math.PI/3, playerPlane.rotation.z));
+
+            // Speed
+            if (keys['ShiftLeft']) speed = Math.min(speed + specs.accel, specs.maxSpeed);
+            else speed = Math.max(speed - specs.accel * 0.4, specs.minSpeed);
+            playerPlane.userData.speed = speed;
+
+            // Move
+            const dir = new THREE.Vector3(0, 0, 1).applyQuaternion(playerPlane.quaternion);
+            playerPlane.position.add(dir.multiplyScalar(speed * 0.016));
+            playerPlane.position.y = Math.max(5, Math.min(1500, playerPlane.position.y));
+
+            if (playerPlane.userData.prop) playerPlane.userData.prop.rotation.x += 0.5;
+
+            if (weaponCD > 0) weaponCD--;
+            if (keys['Space'] && weaponCD <= 0) {
+                const barrelOff = new THREE.Vector3(0, 0, -8).applyQuaternion(playerPlane.quaternion);
+                const firePos = playerPlane.position.clone().add(barrelOff);
+                const fireDir = new THREE.Vector3(0, 0, 1).applyQuaternion(playerPlane.quaternion);
+                createBullet(firePos, fireDir, false);
+                weaponCD = specs.weaponCD;
+            }
+
+            // Camera follow
+            const camOffset = new THREE.Vector3(0, 20, -50).applyQuaternion(playerPlane.quaternion);
+            const camPos = playerPlane.position.clone().add(camOffset);
+            camera.position.lerp(camPos, 0.12);
+            camera.lookAt(playerPlane.position);
+        }
+
+        // Enemies
+        function updateEnemies() {
+            enemies.forEach(enemy => {
+                const specs = planeSpecs[enemy.type];
+                if (enemy.mesh.userData.prop) enemy.mesh.userData.prop.rotation.x += 0.3;
+
+                const toPlayer = new THREE.Vector3().subVectors(playerPlane.position, enemy.mesh.position);
+                const dist = toPlayer.length();
+
+                enemy.stateTimer++;
+                if (enemy.state === 'chase') {
+                    if (enemy.stateTimer > 80 || dist < 120) { enemy.state = 'attack'; enemy.stateTimer = 0; }
+                    const targetQ = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,1), toPlayer.normalize());
+                    enemy.mesh.quaternion.slerp(targetQ, 0.015);
+                } else {
+                    if (enemy.stateTimer > 50 || dist > 200) { enemy.state = 'chase'; enemy.stateTimer = 0; }
+                    enemy.weaponCD--;
+                    if (enemy.weaponCD <= 0) {
+                        const barrelOff = new THREE.Vector3(0, 0, -8).applyQuaternion(enemy.mesh.quaternion);
+                        createBullet(enemy.mesh.position.clone().add(barrelOff), toPlayer.normalize(), true);
+                        enemy.weaponCD = 100;
+                    }
+                }
+
+                const dir = new THREE.Vector3(0, 0, 1).applyQuaternion(enemy.mesh.quaternion);
+                enemy.mesh.position.add(dir.multiplyScalar(specs.maxSpeed * 0.012));
+                enemy.mesh.position.y = Math.max(10, Math.min(1500, enemy.mesh.position.y));
+            });
+        }
+
+        // Bullets
+        function updateBullets() {
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const b = bullets[i];
+                const spd = b.userData.isEnemy ? 25 : playerSpecs.bulletSpeed;
+                b.position.add(b.userData.dir.clone().multiplyScalar(spd));
+                b.userData.life--;
+
+                if (b.userData.trail) {
+                    b.userData.trail.position.copy(b.position).sub(b.userData.dir.clone().multiplyScalar(4));
+                }
+
+                if (b.userData.isEnemy) {
+                    if (b.position.distanceTo(playerPlane.position) < 5) {
+                        playerHealth -= b.userData.damage;
+                        createExplosion(b.position, 0.4);
+                        scene.remove(b);
+                        if (b.userData.trail) scene.remove(b.userData.trail);
+                        bullets.splice(i, 1);
+                        if (playerHealth <= 0) { playerHealth = 0; isDead = true; createExplosion(playerPlane.position, 2); }
+                        updateHUD();
+                        continue;
+                    }
+                } else {
+                    for (let j = enemies.length - 1; j >= 0; j--) {
+                        if (b.position.distanceTo(enemies[j].mesh.position) < 8) {
+                            enemies[j].health -= b.userData.damage;
+                            createExplosion(b.position, 0.4);
+                            scene.remove(b);
+                            if (b.userData.trail) scene.remove(b.userData.trail);
+                            bullets.splice(i, 1);
+                            if (enemies[j].health <= 0) {
+                                createExplosion(enemies[j].mesh.position, 1.5);
+                                scene.remove(enemies[j].mesh);
+                                enemies.splice(j, 1);
+                                score += 100 * level;
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                if (b.userData.life <= 0) {
+                    scene.remove(b);
+                    if (b.userData.trail) scene.remove(b.userData.trail);
+                    bullets.splice(i, 1);
+                }
+            }
+        }
+
+        // Explosions
+        function updateExplosions() {
+            for (let i = explosions.length - 1; i >= 0; i--) {
+                const e = explosions[i];
+                e.age++;
+                e.mesh.children.forEach(p => {
+                    p.position.add(p.userData.vel.clone());
+                    p.rotation.x += 0.1;
+                    p.rotation.y += 0.1;
+                    p.scale.setScalar(1 - e.age / e.maxAge);
+                });
+                if (e.age >= e.maxAge) { scene.remove(e.mesh); explosions.splice(i, 1); }
+            }
+        }
+
+        // Black screen
+        function showBlackScreen() {
+            document.getElementById('blackScreen').classList.add('visible');
+            document.getElementById('gameOver').classList.add('visible');
+            setTimeout(() => {
+                document.getElementById('blackScreen').classList.remove('visible');
+                document.getElementById('gameOver').classList.remove('visible');
+                document.getElementById('hud').classList.remove('visible');
+                document.getElementById('startScreen').classList.remove('hidden');
+                level = 1; score = 0;
+                if (playerPlane) scene.remove(playerPlane);
+                enemies.forEach(e => scene.remove(e.mesh));
+                enemies.length = 0;
+                bullets.forEach(b => scene.remove(b));
+                bullets.length = 0;
+                gameState = GameState.MENU;
+            }, 2000);
+        }
+
+        // Level complete
+        function checkLevel() {
+            if (enemies.length === 0 && gameState === GameState.PLAYING) {
+                level++;
+                score += 500;
+                spawnEnemies();
+                updateHUD();
+            }
+        }
+
+        // Main loop
+        let mouseX = 0.5, mouseY = 0.5;
+        function animate() {
+            requestAnimationFrame(animate);
+            if (gameState === GameState.PLAYING) {
+                updatePlayer();
+                updateEnemies();
+                updateBullets();
+                updateExplosions();
+                updateHUD();
+                checkLevel();
+            }
+            clouds.forEach(c => { c.position.x += 0.03; if (c.position.x > 750) c.position.x = -750; });
+            renderer.render(scene, camera);
+        }
+
+        // Events
+        document.addEventListener('keydown', e => {
+            keys[e.code] = true;
+            if (e.code === 'Space') e.preventDefault();
+            if (e.code === 'ShiftLeft') afterburner = true;
+        });
+        document.addEventListener('keyup', e => {
+            keys[e.code] = false;
+            if (e.code === 'ShiftLeft') afterburner = false;
+        });
+        document.addEventListener('mousemove', e => {
+            mouseX = e.clientX / window.innerWidth;
+            mouseY = e.clientY / window.innerHeight;
+        });
+        document.querySelectorAll('.planeCard').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('.planeCard').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                selectedPlane = card.dataset.plane;
+            });
+        });
+        document.querySelector('.startBtn').addEventListener('click', () => {
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('hud').classList.add('visible');
+            initGame(selectedPlane);
+        });
+        document.querySelector('.planeCard').classList.add('selected');
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>
