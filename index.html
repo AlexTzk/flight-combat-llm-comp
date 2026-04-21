@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flight Combat LLM Comparison</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0d14;
+      --surface: #111620;
+      --surface2: #161c2a;
+      --border: #1e2a3d;
+      --accent: #3b82f6;
+      --accent2: #60a5fa;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --green: #22c55e;
+      --amber: #f59e0b;
+      --red: #ef4444;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+    }
+
+    header {
+      padding: 48px 24px 32px;
+      text-align: center;
+      background: linear-gradient(180deg, #0d1525 0%, var(--bg) 100%);
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+
+    header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(59,130,246,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .header-tag {
+      display: inline-block;
+      background: rgba(59,130,246,0.15);
+      border: 1px solid rgba(59,130,246,0.3);
+      color: var(--accent2);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      font-size: clamp(28px, 5vw, 52px);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #e2e8f0 30%, #93c5fd);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 16px;
+      max-width: 600px;
+      margin: 0 auto 24px;
+      line-height: 1.6;
+    }
+
+    .header-stats {
+      display: flex;
+      gap: 32px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .hstat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .hstat-val {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--accent2);
+    }
+
+    .hstat-label {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    main {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 24px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+      text-decoration: none;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent), 0 20px 40px rgba(0,0,0,0.5);
+      transform: translateY(-2px);
+    }
+
+    .preview-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: #060a12;
+      overflow: hidden;
+    }
+
+    .preview-iframe-container {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+    }
+
+    .preview-iframe-container iframe {
+      width: 1280px;
+      height: 720px;
+      border: none;
+      transform-origin: top left;
+      transform: scale(var(--scale, 0.28125));
+      pointer-events: none;
+    }
+
+    .preview-placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: linear-gradient(135deg, #0d1525 0%, #0a1020 100%);
+    }
+
+    .preview-placeholder-icon {
+      font-size: 40px;
+      opacity: 0.3;
+    }
+
+    .preview-placeholder-text {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .play-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+
+    .card:hover .play-overlay {
+      background: rgba(0,0,0,0.45);
+    }
+
+    .play-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent);
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      padding: 10px 22px;
+      border-radius: 40px;
+      opacity: 0;
+      transform: scale(0.85);
+      transition: opacity 0.2s, transform 0.2s;
+      box-shadow: 0 4px 20px rgba(59,130,246,0.5);
+    }
+
+    .card:hover .play-btn {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .card-body {
+      padding: 18px 20px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      flex: 1;
+    }
+
+    .card-header {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .game-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.3;
+    }
+
+    .model-name {
+      font-size: 12px;
+      color: var(--accent2);
+      font-weight: 500;
+      font-family: 'Consolas', 'Courier New', monospace;
+    }
+
+    .stats-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .stat-pill {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 11px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .stat-pill .val {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .stat-pill.gen {
+      border-color: rgba(34,197,94,0.25);
+    }
+
+    .stat-pill.gen .val {
+      color: var(--green);
+    }
+
+    .stat-pill.prompts-good { border-color: rgba(34,197,94,0.2); }
+    .stat-pill.prompts-mid  { border-color: rgba(245,158,11,0.2); }
+    .stat-pill.prompts-many { border-color: rgba(239,68,68,0.2);  }
+
+    .notes-wrap {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+    }
+
+    .notes-expand {
+      flex-shrink: 0;
+      background: none;
+      border: none;
+      color: var(--accent2);
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 1px 4px;
+      line-height: 1.55;
+      opacity: 0.7;
+      transition: opacity 0.15s;
+      font-family: monospace;
+    }
+
+    .notes-expand:hover { opacity: 1; }
+
+    .notes {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.55;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .notes.expanded {
+      display: block;
+      -webkit-line-clamp: unset;
+      overflow: visible;
+    }
+
+    .notes-expand.expanded { transform: rotate(90deg); }
+
+    .prompt-section {
+      max-width: 860px;
+      margin: 32px auto 0;
+    }
+
+    .prompt-toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 18px;
+      cursor: pointer;
+      width: 100%;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 500;
+      transition: border-color 0.2s, background 0.2s;
+      user-select: none;
+    }
+
+    .prompt-toggle:hover {
+      border-color: var(--accent);
+      background: var(--surface2);
+    }
+
+    .prompt-toggle-icon {
+      font-size: 16px;
+      color: var(--accent2);
+      flex-shrink: 0;
+    }
+
+    .prompt-toggle-label {
+      flex: 1;
+      text-align: left;
+    }
+
+    .prompt-toggle-arrow {
+      font-size: 11px;
+      color: var(--muted);
+      transition: transform 0.2s;
+    }
+
+    .prompt-section.open .prompt-toggle-arrow {
+      transform: rotate(180deg);
+    }
+
+    .prompt-body {
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height 0.3s ease;
+    }
+
+    .prompt-section.open .prompt-body {
+      max-height: 600px;
+    }
+
+    .prompt-content {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 10px 10px;
+      padding: 20px 22px;
+      font-size: 13px;
+      line-height: 1.7;
+      color: #c8d6ea;
+      white-space: pre-wrap;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+
+    footer {
+      text-align: center;
+      padding: 24px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    @media (max-width: 480px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-tag">LLM Benchmark</div>
+  <h1>Flight Combat<br>LLM Comparison</h1>
+  <p class="subtitle">9 local LLMs tasked with building the same 3D browser flight combat game from a single prompt. Same hardware, same rules — judge for yourself.</p>
+  <div class="header-stats">
+    <div class="hstat"><span class="hstat-val">9</span><span class="hstat-label">Models tested</span></div>
+    <div class="hstat"><span class="hstat-val">ThreeJS</span><span class="hstat-label">Engine</span></div>
+    <div class="hstat"><span class="hstat-val">1</span><span class="hstat-label">Prompt to start</span></div>
+    <div class="hstat"><span class="hstat-val">Local</span><span class="hstat-label">Inference (MLX)</span></div>
+  </div>
+</header>
+
+<div class="prompt-section" id="promptSection">
+  <button class="prompt-toggle" onclick="togglePrompt()">
+    <span class="prompt-toggle-icon">📋</span>
+    <span class="prompt-toggle-label">View the original prompt given to every model</span>
+    <span class="prompt-toggle-arrow">▼</span>
+  </button>
+  <div class="prompt-body">
+    <div class="prompt-content">Design and create flight combat simulator game. The game must feature 3d graphics in any style you choose.
+
+A Start Screen that allows the user to select the plane they will use. The user may select from three potential options as follows: A fighter Jet, A Propeller Plane, An option of your choosing.
+
+Each Plane must have realistic limitations on its performance, which should also be displayed graphically on the plane selection screen.
+
+Once the plane is selected and the game started, there will be a dynamic number of opposing planes the user can engage in a dogfight with. There MUST be visible ammunition traces, as well as functional damage implementation for both enemy and player planes.
+
+If the player defeats all enemy planes in a round, the level repeats with increased difficulty. If the player loses, the plane they are in becomes uncontrollable and falls to the ground, returning them to the home screen following a 2 second black screen.
+
+You may use any library for this implementation, but it must be contained within a single script, and be able to be opened and played in the chrome browser.</div>
+  </div>
+</div>
+
+<div class="prompt-section" id="setupSection">
+  <button class="prompt-toggle" onclick="document.getElementById('setupSection').classList.toggle('open')">
+    <span class="prompt-toggle-icon">⚙️</span>
+    <span class="prompt-toggle-label">View the test setup</span>
+    <span class="prompt-toggle-arrow">▼</span>
+  </button>
+  <div class="prompt-body">
+    <div class="prompt-content">Hardware: Apple M3 Max · 128 GB unified memory
+Inference server: oMLX
+Interface: Claude Code (CLI)
+Context window: 256k tokens (identical across all models)
+Temperature: 0.8 (identical across all models)
+
+Each model received the same single prompt with no additional instructions. Follow-up prompts were used only to fix bugs — the content of those follow-ups is noted in each HTML file as comments at the top of the file. 
+
+Prompt gratefully borrowed from Bijan Bowen.</div>
+  </div>
+</div>
+
+<main>
+  <div class="grid" id="grid"></div>
+</main>
+
+<footer>
+  Click any card to launch the game &nbsp;·&nbsp; All games run locally in your browser
+</footer>
+
+<script>
+  const games = [
+    {
+      file: 'qwen3.6-35b-a3b-8bit-unsloth.html',
+      title: 'Flight Combat Simulator',
+      model: 'Qwen3.6-35B-A3B · Unsloth 8bit',
+      genSpeed: 36.6,
+      prefillSpeed: 523.9,
+      prompts: 3,
+      lines: null,
+      stack: 'ThreeJS · JS',
+      notes: 'Most impressive result overall. Playable from the start, beautiful map with mountains, clouds, water, and a minimap. Plane models were distinct, propeller working, shooting sprites correct. Even sent the command to open Chrome when done.',
+    },
+    {
+      file: 'qwopus3.5-27b-8bit.html',
+      title: '3D Flight Combat Simulator',
+      model: 'Qwopus3.5-27b · 8bit MLX',
+      genSpeed: 9.8,
+      prefillSpeed: 149,
+      prompts: 2,
+      lines: 1049,
+      stack: 'ThreeJS · JS · Web Audio API',
+      notes: 'Only model to add sound effects without being asked. Closest to a real flight sim — appears to implement velocity, drag and thrust. Blood sprites on crash. Yellow highlight on plane selection screen.',
+    },
+    {
+      file: 'gemma4-26b-a4b-it-unsloth-8bit.html',
+      title: 'Flight Combat Simulator',
+      model: 'Gemma-4-26b-A4B · Unsloth 8bit',
+      genSpeed: 58.3,
+      prefillSpeed: 507,
+      prompts: 3,
+      lines: 603,
+      stack: 'ThreeJS · JS',
+      notes: 'Solid gameplay from the first try — good camera, controls, shooting traces, death logic. Speeds expressed in knots. Fog effect gives the impression of an infinite map. Fast MoE model.',
+    },
+    {
+      file: 'qwen3codernext80b-mlx-8bit.html',
+      title: 'Sky Ace — 3D Flight Combat Simulator',
+      model: 'Qwen-3-Coder-Next-80B · 8bit MLX',
+      genSpeed: 36.1,
+      prefillSpeed: 319.1,
+      prompts: 3,
+      lines: 1635,
+      stack: 'ThreeJS · JS',
+      notes: 'Impressive gradient on the plane selection screen. Map with bounds, clouds. Nice shifting gradient. Per-plane stats displayed. No enemies present — plane models rotated 180°. Camera still somewhat sensitive.',
+    },
+    {
+      file: 'qwen3.6-35b-a3b-mlx-community.html',
+      title: 'Sky Combat — Flight Simulator',
+      model: 'Qwen3.6-35b-A3B · MLX Community 8bit',
+      genSpeed: 37.7,
+      prefillSpeed: 596,
+      prompts: 4,
+      lines: 637,
+      stack: 'ThreeJS · JS',
+      notes: 'Good map and model detail. Took 4 prompts to fix bullet direction, death screen loop, and ground collision. Ranked 2nd among Qwen3.6 35B quants — behind Unsloth, ahead of oMLX.',
+    },
+    {
+      file: 'qwen3.5-35b-a3b-8bit-mlx-community.html',
+      title: 'Flight Combat Simulator',
+      model: 'Qwen3.5-35b-A3B · MLX Community 8bit',
+      genSpeed: 31.8,
+      prefillSpeed: 736,
+      prompts: 3,
+      lines: 1420,
+      stack: 'ThreeJS · JS',
+      notes: 'Interesting design with unique plane stat display (first non-bar-chart layout seen). Clouds are a nice touch. Enemies very slow. No weapon traces. Failed to fix the death screen return.',
+    },
+    {
+      file: 'gemma-31b-dense-it-unsloth-mlx-8bit.html',
+      title: 'SkyCombat 3D',
+      model: 'Gemma 3 31b-Dense · Unsloth 8bit',
+      genSpeed: 8.5,
+      prefillSpeed: 146.2,
+      prompts: 2,
+      lines: 514,
+      stack: 'ThreeJS · JS',
+      notes: 'Minimalist but solid result. Playable from the start, no major bugs. Bar chart stats on the plane selection screen. Fewest lines of code of all models — efficient and to the point.',
+    },
+    {
+      file: 'qwen3.6-35b-a3b-8bit-oQ-oMLX.html',
+      title: 'Flight Combat Simulator',
+      model: 'Qwen3.6-35B-A3B · oQ oMLX 8bit',
+      genSpeed: 35.6,
+      prefillSpeed: 523.9,
+      prompts: 5,
+      lines: null,
+      stack: 'ThreeJS · JS',
+      notes: 'Best visuals of all — mountains, clouds, water, hills, snow-capped peaks. Model reviewed its own code before finishing. Required most prompts due to mid-task choking and misinterpreting steering/shooting fixes.',
+    },
+    {
+      file: 'qwen3.5-27b-8bit-mlx-community.html',
+      title: 'Sky Dominator',
+      model: 'Qwen3.5-27b · MLX Community 8bit',
+      genSpeed: 10.5,
+      prefillSpeed: 153.1,
+      prompts: 3,
+      lines: 609,
+      stack: 'ThreeJS · JS',
+      notes: 'Similar aesthetic to Qwopus (same base model, different distil). No sound. Controls harder than Qwopus. The 35B dense variant outperformed this model; Qwopus takes the crown in the 27B class.',
+    },
+  ];
+
+  function promptClass(n) {
+    if (n <= 2) return 'prompts-good';
+    if (n <= 3) return 'prompts-mid';
+    return 'prompts-many';
+  }
+
+  function buildCard(g) {
+    const card = document.createElement('a');
+    card.className = 'card';
+    card.href = g.file;
+    card.target = '_blank';
+    card.rel = 'noopener';
+
+    // --scale so the 1280×720 iframe fits the 16:9 preview div
+    // We'll set this via JS after layout, but approximate: card ~360px wide, preview ~202px tall
+    // scale = previewWidth / 1280
+    const scaleApprox = 0.28125; // 360/1280
+
+    card.innerHTML = `
+      <div class="preview-wrap" data-src="${g.file}">
+        <div class="preview-iframe-container" style="--scale:${scaleApprox}">
+          <!-- iframe injected on demand -->
+        </div>
+        <div class="preview-placeholder">
+          <div class="preview-placeholder-icon">✈</div>
+          <div class="preview-placeholder-text">Loading preview…</div>
+        </div>
+        <div class="play-overlay">
+          <div class="play-btn">▶&nbsp; Launch Game</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-header">
+          <div class="game-title">${g.title}</div>
+          <div class="model-name">${g.model}</div>
+        </div>
+        <div class="stats-row">
+          <div class="stat-pill gen">
+            <span>Gen</span>
+            <span class="val">${g.genSpeed} tok/s</span>
+          </div>
+          <div class="stat-pill ${promptClass(g.prompts)}">
+            <span>Prompts</span>
+            <span class="val">${g.prompts}</span>
+          </div>
+          ${g.lines ? `<div class="stat-pill"><span>Lines</span><span class="val">${g.lines.toLocaleString()}</span></div>` : ''}
+          <div class="stat-pill"><span class="val">${g.stack}</span></div>
+        </div>
+        <div class="notes-wrap">
+          <button class="notes-expand" onclick="toggleNotes(event, this)" title="Expand">›</button>
+          <p class="notes">${g.notes}</p>
+        </div>
+      </div>
+    `;
+
+    return card;
+  }
+
+  const grid = document.getElementById('grid');
+  const cardEls = [];
+
+  games.forEach(g => {
+    const card = buildCard(g);
+    grid.appendChild(card);
+    cardEls.push(card);
+  });
+
+  // Compute actual scale after layout and inject iframes via IntersectionObserver
+  function injectIframe(wrapEl) {
+    if (wrapEl.dataset.loaded) return;
+    wrapEl.dataset.loaded = '1';
+
+    const src = wrapEl.dataset.src;
+    const containerEl = wrapEl.querySelector('.preview-iframe-container');
+    const placeholder = wrapEl.querySelector('.preview-placeholder');
+    const actualWidth = wrapEl.offsetWidth;
+    const scale = actualWidth / 1280;
+
+    containerEl.style.setProperty('--scale', scale);
+
+    const iframe = document.createElement('iframe');
+    iframe.src = src;
+    iframe.scrolling = 'no';
+    iframe.sandbox = 'allow-scripts allow-same-origin';
+    iframe.title = src;
+
+    iframe.addEventListener('load', () => {
+      if (placeholder) placeholder.style.opacity = '0';
+    });
+
+    containerEl.appendChild(iframe);
+  }
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const wrap = entry.target.querySelector('.preview-wrap');
+        if (wrap) injectIframe(wrap);
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { rootMargin: '200px' });
+
+  cardEls.forEach(card => observer.observe(card));
+
+  function toggleNotes(e, btn) {
+    e.preventDefault();
+    e.stopPropagation();
+    const notes = btn.nextElementSibling;
+    const expanded = notes.classList.toggle('expanded');
+    btn.classList.toggle('expanded', expanded);
+  }
+
+  function togglePrompt() {
+    document.getElementById('promptSection').classList.toggle('open');
+  }
+
+  // Recalculate scales on resize
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      document.querySelectorAll('.preview-wrap[data-loaded]').forEach(wrap => {
+        const containerEl = wrap.querySelector('.preview-iframe-container');
+        const scale = wrap.offsetWidth / 1280;
+        containerEl.style.setProperty('--scale', scale);
+        const iframe = containerEl.querySelector('iframe');
+        if (iframe) iframe.style.transform = `scale(${scale})`;
+      });
+    }, 150);
+  });
+</script>
+
+</body>
+</html>
