@@ -1,0 +1,1 @@
+The file @script.py contains a Python data pipeline with a bunch of bugs. Read the entire file, fix every bug you can find, then provide a summary table at the end with columns: Location | Bug Type | Silent or Crashing | Description | Fix Applied
