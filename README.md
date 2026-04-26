@@ -17,6 +17,5 @@ A repository containing the artifacts from 3 different tests across 9 local LLMs
 
 
 ## Competition:
-- First competition is a flight combat simulator game contained in 1 html file. [Open Prompt](./PROMPT.md)
-- Second competition is a bug hunt task.[Open Prompt](./coding-task/PROMPT.md)
-
+- First competition is a flight combat simulator game contained in 1 html file. [prompt](./PROMPT.md)
+- Second competition is a bug hunt task.[prompt](./coding-task/PROMPT.md)
