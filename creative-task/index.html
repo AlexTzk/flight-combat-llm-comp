@@ -809,6 +809,23 @@ Required sections: studio story, commission process, portfolio of 6 invented wor
   </div>
 </div>
 
+<div class="prompt-section" id="setupSection">
+  <button class="prompt-toggle" onclick="document.getElementById('setupSection').classList.toggle('open')">
+    <span class="prompt-toggle-icon">⚙️</span>
+    <span class="prompt-toggle-label">View the test setup</span>
+    <span class="prompt-toggle-arrow">▼</span>
+  </button>
+  <div class="prompt-body">
+    <div class="prompt-content">Hardware: Apple M3 Max · 128 GB unified memory
+Inference server: oMLX
+Interface: Claude Code (CLI)
+Context window: 256k tokens (identical across all models)
+Temperature: 0.8 (identical across all models)
+
+Each model received the same single prompt with no additional instructions. Follow-up prompts were used only to iterate on bugs or missing elements — the content of those follow-ups is noted in each HTML file as comments at the top of the file.</div>
+  </div>
+</div>
+
 <main>
   <div class="compare-bar">
     <span class="compare-hint" id="compareHint">Click two cards to select them</span>
