@@ -1,0 +1,1276 @@
+<!--
+35,853 tokens 
+Prompt Processing 121.4 t/s /  Generation 12.4 t/s
+Qwopus3.5 27b dense
+Good background but the showcased work area needed a subsequent prompt. The slider button is small and in the corner which makes it very easy to miss.
+It should be right next to the frame containing the works. There's also another bug where the preview of said work is being dispalyed for only a second and then it disappears. 
+The content of the website is pretty good, its well written and it is written in french as well which is suitable. This wasn't a directive but, then again, we are talking about a french company. 
+Overall it was a good result but not extraordinary. 
+1266 lines of code
+-->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lumière Atelier | Lyon</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Space+Mono:wght@300;400;600&display=swap');
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    :root {
+      --bg: #0a0a0a;
+      --glass-red: #8b0000;
+      --glass-blue: #003366;
+      --glass-gold: #d4af37;
+      --glass-emerald: #006633;
+      --text-primary: rgba(255, 255, 255, 0.95);
+      --text-secondary: rgba(255, 255, 255, 0.6);
+      --text-tertiary: rgba(255, 255, 255, 0.4);
+      --glass-border: rgba(255, 255, 255, 0.15);
+      --glow: rgba(212, 175, 55, 0.3);
+    }
+    
+    html {
+      scroll-behavior: smooth;
+    }
+    
+    body {
+      background: var(--bg);
+      color: var(--text-primary);
+      font-family: 'Cormorant Garamond', serif;
+      overflow-x: hidden;
+      cursor: none;
+    }
+    
+    /* Custom Cursor */
+    .cursor {
+      position: fixed;
+      width: 20px;
+      height: 20px;
+      border: 1px solid var(--glass-gold);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transition: transform 0.1s ease, opacity 0.3s ease;
+      mix-blend-mode: difference;
+    }
+    
+    .cursor-dot {
+      position: fixed;
+      width: 4px;
+      height: 4px;
+      background: var(--glass-gold);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+    }
+    
+    /* WebGL Canvas */
+    #webgl-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: -1;
+      opacity: 0.4;
+    }
+    
+    /* Navigation */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      padding: 2rem 4rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+      mix-blend-mode: difference;
+    }
+    
+    .logo {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.5rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-weight: 300;
+      color: #fff;
+    }
+    
+    .logo span {
+      font-style: italic;
+      color: var(--glass-gold);
+    }
+    
+    .nav-links {
+      display: flex;
+      gap: 3rem;
+      list-style: none;
+    }
+    
+    .nav-links a {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #fff;
+      text-decoration: none;
+      position: relative;
+      padding: 0.5rem 0;
+      transition: color 0.3s ease;
+    }
+    
+    .nav-links a::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 0;
+      height: 1px;
+      background: var(--glass-gold);
+      transition: width 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+    }
+    
+    .nav-links a:hover {
+      color: var(--glass-gold);
+    }
+    
+    .nav-links a:hover::after {
+      width: 100%;
+    }
+    
+    /* Hero Section */
+    .hero {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      position: relative;
+      padding: 0 4rem;
+    }
+    
+    .hero::before {
+      content: '';
+      position: absolute;
+      width: 1px;
+      height: 200px;
+      background: linear-gradient(to bottom, transparent, var(--glass-gold), transparent);
+      left: 50%;
+      top: 15vh;
+      animation: drip 4s ease-in-out infinite;
+    }
+    
+    @keyframes drip {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 1; }
+    }
+    
+    .hero-title {
+      font-size: clamp(3rem, 12vw, 10rem);
+      font-weight: 300;
+      line-height: 0.9;
+      letter-spacing: -0.02em;
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 2;
+    }
+    
+    .hero-title .line {
+      display: block;
+      opacity: 0;
+      transform: translateY(100px) rotateX(90deg);
+      transform-origin: bottom center;
+      animation: reveal 1.2s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+    }
+    
+    .hero-title .line:nth-child(1) { animation-delay: 0.2s; }
+    .hero-title .line:nth-child(2) { animation-delay: 0.4s; font-style: italic; color: var(--glass-gold); }
+    .hero-title .line:nth-child(3) { animation-delay: 0.6s; }
+    
+    @keyframes reveal {
+      to {
+        opacity: 1;
+        transform: translateY(0) rotateX(0);
+      }
+    }
+    
+    .hero-subtitle {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.875rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      opacity: 0;
+      animation: fadeIn 1s ease forwards;
+      animation-delay: 1.2s;
+    }
+    
+    @keyframes fadeIn {
+      to { opacity: 1; }
+    }
+    
+    .scroll-indicator {
+      position: absolute;
+      bottom: 4rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      opacity: 0;
+      animation: fadeIn 1s ease forwards;
+      animation-delay: 1.5s;
+    }
+    
+    .scroll-line {
+      width: 1px;
+      height: 60px;
+      background: linear-gradient(to bottom, transparent, var(--glass-gold));
+    }
+    
+    .scroll-text {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.625rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+    }
+    
+    /* Section Styles */
+    section {
+      padding: 12rem 4rem;
+      position: relative;
+    }
+    
+    .section-header {
+      margin-bottom: 6rem;
+    }
+    
+    .section-number {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.2em;
+      color: var(--glass-gold);
+      margin-bottom: 1rem;
+      display: block;
+    }
+    
+    .section-title {
+      font-size: clamp(2.5rem, 5vw, 4rem);
+      font-weight: 300;
+      line-height: 1.1;
+    }
+    
+    .section-title span {
+      font-style: italic;
+      color: var(--glass-gold);
+    }
+    
+    /* Studio Story */
+    .studio-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8rem;
+      align-items: start;
+    }
+    
+    .studio-text p {
+      font-size: 1.25rem;
+      line-height: 1.8;
+      margin-bottom: 2rem;
+      color: var(--text-secondary);
+      font-weight: 300;
+    }
+    
+    .studio-text p:first-child {
+      color: var(--text-primary);
+    }
+    
+    .studio-text em {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 1.5rem;
+      display: block;
+      margin: 3rem 0;
+      padding-left: 2rem;
+      border-left: 1px solid var(--glass-gold);
+      color: var(--text-primary);
+    }
+    
+    .glass-panel {
+      position: relative;
+      height: 600px;
+      border: 1px solid var(--glass-border);
+      overflow: hidden;
+      filter: blur(0.5px);
+    }
+    
+    .glass-panel::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: 
+        linear-gradient(135deg, transparent 40%, rgba(212, 175, 55, 0.1) 100%),
+        linear-gradient(225deg, transparent 40%, rgba(0, 51, 102, 0.1) 100%);
+      backdrop-filter: blur(5px);
+    }
+    
+    .glass-lead {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 200px;
+      height: 200px;
+      border: 2px solid rgba(212, 175, 55, 0.3);
+      transform: translate(-50%, -50%) rotate(45deg);
+    }
+    
+    .glass-lead::before {
+      content: '';
+      position: absolute;
+      inset: 10px;
+      border: 1px solid rgba(212, 175, 55, 0.2);
+    }
+    
+    /* Commission Process */
+    .process-container {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 2rem;
+      margin-top: 4rem;
+    }
+    
+    .process-step {
+      position: relative;
+      padding: 3rem 2rem;
+      border-left: 1px solid var(--glass-border);
+      transition: all 0.4s ease;
+      cursor: pointer;
+    }
+    
+    .process-step:hover {
+      background: rgba(255, 255, 255, 0.02);
+      border-color: var(--glass-gold);
+    }
+    
+    .process-step::before {
+      content: attr(data-step);
+      position: absolute;
+      top: -1rem;
+      left: 0;
+      font-family: 'Space Mono', monospace;
+      font-size: 4rem;
+      opacity: 0.05;
+      font-weight: 600;
+    }
+    
+    .process-step h3 {
+      font-size: 1.25rem;
+      font-weight: 300;
+      margin-bottom: 1rem;
+      letter-spacing: 0.05em;
+    }
+    
+    .process-step p {
+      font-size: 0.9rem;
+      line-height: 1.7;
+      color: var(--text-secondary);
+      font-weight: 300;
+    }
+    
+    .process-step .icon {
+      margin-bottom: 2rem;
+      font-size: 1.5rem;
+      color: var(--glass-gold);
+      opacity: 0.7;
+    }
+    
+    /* Portfolio */
+    .portfolio-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4rem;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid var(--glass-border);
+    }
+    
+    .portfolio-nav-title {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.2em;
+      color: var(--text-tertiary);
+    }
+    
+    .portfolio-nav-dots {
+      display: flex;
+      gap: 1rem;
+    }
+    
+    .dot {
+      width: 6px;
+      height: 6px;
+      border: 1px solid var(--glass-border);
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .dot.active {
+      background: var(--glass-gold);
+      border-color: var(--glass-gold);
+    }
+    
+    .dot:hover {
+      border-color: var(--glass-gold);
+    }
+    
+    .portfolio-item {
+      display: none;
+      animation: fadeIn 0.6s ease;
+    }
+    
+    .portfolio-item.active {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 4rem;
+    }
+    
+    .portfolio-visual {
+      position: relative;
+      height: 700px;
+      overflow: hidden;
+      border: 1px solid var(--glass-border);
+    }
+    
+    .stained-glass {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      background: 
+        linear-gradient(135deg, 
+          rgba(139, 0, 0, 0.3) 0%, 
+          rgba(212, 175, 55, 0.2) 25%, 
+          rgba(0, 51, 102, 0.3) 50%, 
+          rgba(0, 102, 51, 0.2) 75%, 
+          rgba(139, 0, 0, 0.3) 100%);
+      mix-blend-mode: overlay;
+      filter: blur(20px);
+      animation: glassFlow 20s ease-in-out infinite;
+    }
+    
+    @keyframes glassFlow {
+      0%, 100% { transform: scale(1) rotate(0deg); }
+      50% { transform: scale(1.1) rotate(5deg); }
+    }
+    
+    .lead-lines {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(45deg, rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(-45deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 150px 150px, 150px 150px, 200px 200px, 200px 200px;
+    }
+    
+    .portfolio-info {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    
+    .portfolio-year {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--glass-gold);
+      letter-spacing: 0.2em;
+      margin-bottom: 1rem;
+    }
+    
+    .portfolio-title {
+      font-size: 3rem;
+      font-weight: 300;
+      line-height: 1;
+      margin-bottom: 0.5rem;
+    }
+    
+    .portfolio-title em {
+      font-style: italic;
+      color: var(--glass-gold);
+      display: block;
+      font-size: 1.5rem;
+      margin-top: 0.5rem;
+    }
+    
+    .portfolio-location {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--text-tertiary);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 2rem;
+    }
+    
+    .portfolio-desc {
+      font-size: 1.1rem;
+      line-height: 1.8;
+      color: var(--text-secondary);
+      margin-bottom: 2rem;
+      font-weight: 300;
+    }
+    
+    .portfolio-specs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--text-tertiary);
+      letter-spacing: 0.1em;
+      border-top: 1px solid var(--glass-border);
+      padding-top: 1.5rem;
+    }
+    
+    .spec-item span {
+      display: block;
+      margin-bottom: 0.25rem;
+      opacity: 0.6;
+    }
+    
+    /* Contact */
+    .contact-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8rem;
+    }
+    
+    .contact-info {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    
+    .contact-intro {
+      font-size: 1.5rem;
+      line-height: 1.6;
+      margin-bottom: 4rem;
+      color: var(--text-secondary);
+      font-weight: 300;
+    }
+    
+    .contact-details {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+    
+    .contact-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    
+    .contact-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.625rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--glass-gold);
+    }
+    
+    .contact-value {
+      font-size: 1.25rem;
+      font-weight: 300;
+    }
+    
+    .contact-form {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+    
+    .form-group {
+      position: relative;
+    }
+    
+    .form-input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--glass-border);
+      padding: 1rem 0;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.25rem;
+      color: var(--text-primary);
+      outline: none;
+      transition: border-color 0.3s ease;
+    }
+    
+    .form-input:focus {
+      border-color: var(--glass-gold);
+    }
+    
+    .form-input::placeholder {
+      color: var(--text-tertiary);
+      font-style: italic;
+    }
+    
+    .form-label {
+      position: absolute;
+      top: 1rem;
+      left: 0;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.625rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+      pointer-events: none;
+      transition: all 0.3s ease;
+    }
+    
+    .form-input:focus ~ .form-label,
+    .form-input:not(:placeholder-shown) ~ .form-label {
+      top: -0.5rem;
+      font-size: 0.6rem;
+      color: var(--glass-gold);
+    }
+    
+    .submit-btn {
+      background: transparent;
+      border: 1px solid var(--glass-gold);
+      color: var(--glass-gold);
+      padding: 1.5rem 3rem;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.4s ease;
+      align-self: start;
+      margin-top: 1rem;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .submit-btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: var(--glass-gold);
+      transition: left 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+      z-index: -1;
+    }
+    
+    .submit-btn:hover {
+      color: #000;
+    }
+    
+    .submit-btn:hover::before {
+      left: 0;
+    }
+    
+    /* Footer */
+    footer {
+      padding: 4rem;
+      border-top: 1px solid var(--glass-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.625rem;
+      letter-spacing: 0.2em;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+    }
+    
+    .social-links {
+      display: flex;
+      gap: 2rem;
+    }
+    
+    .social-links a {
+      color: var(--text-tertiary);
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+    
+    .social-links a:hover {
+      color: var(--glass-gold);
+    }
+    
+    /* Light Particles */
+    .particle {
+      position: fixed;
+      width: 2px;
+      height: 2px;
+      background: var(--glass-gold);
+      border-radius: 50%;
+      pointer-events: none;
+      animation: float 15s ease-in-out infinite;
+      opacity: 0.5;
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0) translateX(0); opacity: 0; }
+      10% { opacity: 0.5; }
+      90% { opacity: 0.5; }
+      100% { transform: translateY(-100vh) translateX(50px); opacity: 0; }
+    }
+    
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .studio-grid, .contact-layout {
+        grid-template-columns: 1fr;
+        gap: 4rem;
+      }
+      
+      .process-container {
+        grid-template-columns: 1fr 1fr;
+      }
+      
+      .portfolio-item.active {
+        grid-template-columns: 1fr;
+      }
+      
+      .portfolio-visual {
+        height: 400px;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      nav {
+        padding: 1.5rem 2rem;
+      }
+      
+      .nav-links {
+        display: none;
+      }
+      
+      section {
+        padding: 8rem 2rem;
+      }
+      
+      .process-container {
+        grid-template-columns: 1fr;
+      }
+      
+      .portfolio-title {
+        font-size: 2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Custom Cursor -->
+  <div class="cursor"></div>
+  <div class="cursor-dot"></div>
+  
+  <!-- WebGL Background -->
+  <canvas id="webgl-canvas"></canvas>
+  
+  <!-- Particles -->
+  <div id="particles"></div>
+  
+  <!-- Navigation -->
+  <nav>
+    <div class="logo">Lumière <span>Atelier</span></div>
+    <ul class="nav-links">
+      <li><a href="#atelier">Atelier</a></li>
+      <li><a href="#commission">Commission</a></li>
+      <li><a href="#oeuvres">Œuvres</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+  </nav>
+  
+  <!-- Hero -->
+  <section class="hero">
+    <h1 class="hero-title">
+      <span class="line">L'Art de la</span>
+      <span class="line">Verrerie</span>
+      <span class="line">Sacrée</span>
+    </h1>
+    <p class="hero-subtitle">Atelier d'art sacré • Lyon, France • Établi 1847</p>
+    <div class="scroll-indicator">
+      <div class="scroll-line"></div>
+      <span class="scroll-text">Descendre</span>
+    </div>
+  </section>
+  
+  <!-- Atelier Story -->
+  <section id="atelier">
+    <div class="section-header">
+      <span class="section-number">01</span>
+      <h2 class="section-title">L'<span>Atelier</span></h2>
+    </div>
+    <div class="studio-grid">
+      <div class="studio-text">
+        <p>Dans le cœur battant du Vieux Lyon, sous les voûtes d'un hôtel particulier du XVIIe siècle, Lumière Atelier perpétue une tradition séculaire de verroterie sacrée. Chaque pièce est une prière translucide, une méditation sur la lumière divine filtrée à travers la matière.</p>
+        <p>Nos maîtres verriers, héritiers d'une lignée de créateurs ayant orné les cathédrales de Bourgogne, souflent le verre avec une précision chirurgicale. Le plomb, l'étain et le feu danisent sous leurs soufflets pour donner naissance à des compositions qui transcendent le temps.</p>
+        <em>"Nous ne fabriquons pas du verre. Nous capturent la lumière éternelle dans des membranes de couleur, créant des fenêtres vers l'absolu."</em>
+        <p>Chaque commission est un acte de foi — une collaboration entre l'architecte, le maître verrier et la lumière elle-même. Nos installations deviennent l'âme visuelle des espaces, transformant l'ordinaire en sacré, le passage en transcendance.</p>
+      </div>
+      <div class="glass-panel">
+        <div class="glass-lead"></div>
+      </div>
+    </div>
+  </section>
+  
+  <!-- Commission Process -->
+  <section id="commission">
+    <div class="section-header">
+      <span class="section-number">02</span>
+      <h2 class="section-title">Le <span>Processus</span></h2>
+    </div>
+    <div class="process-container">
+      <div class="process-step" data-step="01">
+        <div class="icon">✧</div>
+        <h3>La Rencontre</h3>
+        <p>Un dialogue initial où l'architecte et le maître verrier explorent la spiritualité de l'espace. Échanges autour du thé, des croquis au fusain, et de la qualité de la lumière naturelle.</p>
+      </div>
+      <div class="process-step" data-step="02">
+        <div class="icon">✦</div>
+        <h3>Le Cartonnage</h3>
+        <p>Création du carton au trait — le dessin technique sacré qui définira chaque fragment de verre. Cette étape demande des semaines de réflexion et de précisions millimétrées.</p>
+      </div>
+      <div class="process-step" data-step="03">
+        <div class="icon">❖</div>
+        <h3>La Taille</h3>
+        <p>Chaque pièce de verre est taillée à la main avec des diamants et des plombs. Le son caractéristique du verre qui cède rythme l'atelier comme une musique ancienne.</p>
+      </div>
+      <div class="process-step" data-step="04">
+        <div class="icon">✻</div>
+        <h3>Le Faisage</h3>
+        <p>L'assemblage final où le plomb sert de charpente. Chaque joint est soudé, étamé, et poli pour créer cette ligne noire distinctif qui unit la mosaïque de lumière.</p>
+      </div>
+    </div>
+  </section>
+  
+  <!-- Portfolio -->
+  <section id="oeuvres">
+    <div class="section-header">
+      <span class="section-number">03</span>
+      <h2 class="section-title">Nos <span>Œuvres</span></h2>
+    </div>
+    <div class="portfolio-nav">
+      <span class="portfolio-nav-title">Sélection d'œuvres — 2019—2024</span>
+      <div class="portfolio-nav-dots">
+        <div class="dot active" data-index="0"></div>
+        <div class="dot" data-index="1"></div>
+        <div class="dot" data-index="2"></div>
+        <div class="dot" data-index="3"></div>
+        <div class="dot" data-index="4"></div>
+        <div class="dot" data-index="5"></div>
+      </div>
+    </div>
+    
+    <div class="portfolio-container">
+      <!-- Work 1 -->
+      <div class="portfolio-item active" data-index="0">
+        <div class="portfolio-visual">
+          <div class="stained-glass" style="background: linear-gradient(135deg, rgba(139,0,0,0.4) 0%, rgba(212,175,55,0.3) 50%, rgba(0,51,102,0.4) 100%);"></div>
+          <div class="lead-lines"></div>
+        </div>
+        <div class="portfolio-info">
+          <span class="portfolio-year">2024</span>
+          <h3 class="portfolio-title">L'Ascension<br><em>Cathédrale Saint-Jean</em></h3>
+          <span class="portfolio-location">Lyon, France</span>
+          <p class="portfolio-desc">Vingt mètres de verroterie contemporaine s'élevant au-dessus du transept, représentant l'ascension par des formes abstraites de bleu cobalt et d'or massif. Chaque fragment de verre a été soufflé individuellement pour capturer la lumière du soleil levant.</p>
+          <div class="portfolio-specs">
+            <div class="spec-item"><span>SURFACE</span>45 m²</div>
+            <div class="spec-item"><span>POIDS</span>2,4 tonnes</div>
+            <div class="spec-item"><span>FRAGMENTS</span>12,847</div>
+            <div class="spec-item"><span>DURÉE</span>18 mois</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Work 2 -->
+      <div class="portfolio-item" data-index="1">
+        <div class="portfolio-visual">
+          <div class="stained-glass" style="background: linear-gradient(180deg, rgba(0,102,51,0.3) 0%, rgba(0,51,102,0.5) 50%, rgba(139,0,0,0.3) 100%);"></div>
+          <div class="lead-lines"></div>
+        </div>
+        <div class="portfolio-info">
+          <span class="portfolio-year">2023</span>
+          <h3 class="portfolio-title">Le Jardin<br><em>Musée des Confluences</em></h3>
+          <span class="portfolio-location">Lyon, France</span>
+          <p class="portfolio-desc">Installation monumentale inspirée de la botanique sacrée. Des verres verts émeraude et améthyste forment des feuilles géantes qui semblent pousser le long de la façade, filtrant la lumière en motifs végétatifs.</p>
+          <div class="portfolio-specs">
+            <div class="spec-item"><span>SURFACE</span>120 m²</div>
+            <div class="spec-item"><span>HAUTEUR</span>14 mètres</div>
+            <div class="spec-item"><span>COULEURS</span>47 nuances</div>
+            <div class="spec-item"><span>DURÉE</span>24 mois</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Work 3 -->
+      <div class="portfolio-item" data-index="2">
+        <div class="portfolio-visual">
+          <div class="stained-glass" style="background: linear-gradient(90deg, rgba(212,175,55,0.4) 0%, rgba(139,0,0,0.3) 100%);"></div>
+          <div class="lead-lines"></div>
+        </div>
+        <div class="portfolio-info">
+          <span class="portfolio-year">2023</span>
+          <h3 class="portfolio-title">L'Aube<br><em>Château de Chalon</em></h3>
+          <span class="portfolio-location">Chalon-sur-Saône</span>
+          <p class="portfolio-desc">Cercle solaire de 8 mètres de diamètre composé de verres dorés et ocre, commémorant la renaissance culturelle de la Bourgogne. La lumière traverse les couches de verre pour créer des halos changeants tout au long de la journée.</p>
+          <div class="portfolio-specs">
+            <div class="spec-item"><span>DIAMÈTRE</span>8 mètres</div>
+            <div class="spec-item"><span>TECHNIQUE</span>Verre soufflé</div>
+            <div class="spec-item"><span>PIÈCES</span>3,200</div>
+            <div class="spec-item"><span>DURÉE</span>12 mois</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Work 4 -->
+      <div class="portfolio-item" data-index="3">
+        <div class="portfolio-visual">
+          <div class="stained-glass" style="background: linear-gradient(45deg, rgba(0,51,102,0.4) 0%, rgba(212,175,55,0.2) 50%, rgba(0,102,51,0.4) 100%);"></div>
+          <div class="lead-lines"></div>
+        </div>
+        <div class="portfolio-info">
+          <span class="portfolio-year">2022</span>
+          <h3 class="portfolio-title">Les Quatre Éléments<br><em>Opéra de Dijon</em></h3>
+          <span class="portfolio-location">Dijon, France</span>
+          <p class="portfolio-desc">Quatre baies verticales représentant l'air, la terre, l'eau et le feu. Chaque élément possède sa propre palette chromatique et texture, créant une symphonie visuelle qui change avec les saisons.</p>
+          <div class="portfolio-specs">
+            <div class="spec-item"><span>BAIES</span>4 panneaux</div>
+            <div class="spec-item"><span>HAUTEUR</span>9 mètres</div>
+            <div class="spec-item"><span>ÉTAIN</span>99% pur</div>
+            <div class="spec-item"><span>DURÉE</span>30 mois</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Work 5 -->
+      <div class="portfolio-item" data-index="4">
+        <div class="portfolio-visual">
+          <div class="stained-glass" style="background: radial-gradient(circle, rgba(139,0,0,0.5) 0%, rgba(0,51,102,0.4) 70%, transparent 100%);"></div>
+          <div class="lead-lines"></div>
+        </div>
+        <div class="portfolio-info">
+          <span class="portfolio-year">2021</span>
+          <h3 class="portfolio-title">Cœur de Rubis<br><em>Hôtel de Ville de Beaune</em></h3>
+          <span class="portfolio-location">Beaune, France</span>
+          <p class="portfolio-desc">Rose géométrique de verre rouge rubis et pourpre, hommage à la tradition viticole de la région. La lumière cramoisie inonde la salle des fêtes au coucher du soleil.</p>
+          <div class="portfolio-specs">
+            <div class="spec-item"><span>DIAMÈTRE</span>6 mètres</div>
+            <div class="spec-item"><span>TECHNIQUE</span>Tiffany</div>
+            <div class="spec-item"><span>VERRES</span>22 types</div>
+            <div class="spec-item"><span>DURÉE</span>15 mois</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Work 6 -->
+      <div class="portfolio-item" data-index="5">
+        <div class="portfolio-visual">
+          <div class="stained-glass" style="background: linear-gradient(to bottom, rgba(212,175,55,0.3) 0%, rgba(0,51,102,0.4) 50%, rgba(0,102,51,0.3) 100%);"></div>
+          <div class="lead-lines"></div>
+        </div>
+        <div class="portfolio-info">
+          <span class="portfolio-year">2019</span>
+          <h3 class="portfolio-title">L'Arche<br><em>Université de Strasbourg</em></h3>
+          <span class="portfolio-location">Strasbourg, France</span>
+          <p class="portfolio-desc">Ouverture architecturale en forme d'arche, célébrant le savoir et la transmission. Verres ambrés et bleus tranchant créent un effet de profondeur infinie, comme une porte vers l'ailleurs.</p>
+          <div class="portfolio-specs">
+            <div class="spec-item"><span>ARCHES</span>3 niveaux</div>
+            <div class="spec-item"><span> LARGEUR</span>12 mètres</div>
+            <div class="spec-item"><span>ÉPAISSEUR</span>8mm</div>
+            <div class="spec-item"><span>DURÉE</span>21 mois</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <!-- Contact -->
+  <section id="contact">
+    <div class="section-header">
+      <span class="section-number">04</span>
+      <h2 class="section-title"><span>Contact</span></h2>
+    </div>
+    <div class="contact-layout">
+      <div class="contact-info">
+        <p class="contact-intro">Pour les architectes, les restaurateurs de monuments, et ceux qui cherchent à capturer la lumière divine dans leurs espaces. Chaque projet est une collaboration intime, une œuvre collective de foi et de savoir-faire.</p>
+        <div class="contact-details">
+          <div class="contact-item">
+            <span class="contact-label">Atelier</span>
+            <span class="contact-value">17 Rue Saint-Jean<br>69005 Lyon, France</span>
+          </div>
+          <div class="contact-item">
+            <span class="contact-label">Correspondance</span>
+            <span class="contact-value">atelier@lumiere-lyon.fr</span>
+          </div>
+          <div class="contact-item">
+            <span class="contact-label">Rendez-vous</span>
+            <span class="contact-value">+33 4 78 42 51 89</span>
+          </div>
+          <div class="contact-item">
+            <span class="contact-label">Horaires</span>
+            <span class="contact-value">Mardi — Samedi<br>09h00 — 18h00</span>
+          </div>
+        </div>
+      </div>
+      <div class="contact-form">
+        <div class="form-group">
+          <input type="text" class="form-input" id="name" placeholder=" ">
+          <label for="name" class="form-label">Nom complet</label>
+        </div>
+        <div class="form-group">
+          <input type="email" class="form-input" id="email" placeholder=" ">
+          <label for="email" class="form-label">Courriel</label>
+        </div>
+        <div class="form-group">
+          <input type="text" class="form-input" id="project" placeholder=" ">
+          <label for="project" class="form-label">Nature du projet</label>
+        </div>
+        <div class="form-group">
+          <input type="text" class="form-input" id="message" placeholder=" ">
+          <label for="message" class="form-label">Message</label>
+        </div>
+        <button class="submit-btn">Envoyer</button>
+      </div>
+    </div>
+  </section>
+  
+  <!-- Footer -->
+  <footer>
+    <div>© 2024 Lumière Atelier • Lyon</div>
+    <div class="social-links">
+      <a href="#">Instagram</a>
+      <a href="#">Pinterest</a>
+      <a href="#">LinkedIn</a>
+    </div>
+    <div>Art Sacré & Verroterie</div>
+  </footer>
+  
+  <script>
+    // Custom Cursor
+    const cursor = document.querySelector('.cursor');
+    const cursorDot = document.querySelector('.cursor-dot');
+    
+    document.addEventListener('mousemove', (e) => {
+      cursor.style.left = e.clientX + 'px';
+      cursor.style.top = e.clientY + 'px';
+      cursorDot.style.left = e.clientX + 'px';
+      cursorDot.style.top = e.clientY + 'px';
+    });
+    
+    document.addEventListener('mousedown', () => {
+      cursor.style.transform = 'scale(0.8)';
+    });
+    
+    document.addEventListener('mouseup', () => {
+      cursor.style.transform = 'scale(1)';
+    });
+    
+    // Portfolio Navigation
+    const dots = document.querySelectorAll('.dot');
+    const items = document.querySelectorAll('.portfolio-item');
+    
+    dots.forEach((dot, index) => {
+      dot.addEventListener('click', () => {
+        dots.forEach(d => d.classList.remove('active'));
+        items.forEach(i => i.classList.remove('active'));
+        
+        dot.classList.add('active');
+        items[index].classList.add('active');
+      });
+    });
+    
+    // Smooth scroll with parallax
+    window.addEventListener('scroll', () => {
+      const scrolled = window.pageYOffset;
+      const hero = document.querySelector('.hero');
+      hero.style.transform = `translateY(${scrolled * 0.5}px)`;
+      hero.style.opacity = 1 - (scrolled / 700);
+    });
+    
+    // Create particles
+    function createParticles() {
+      const container = document.getElementById('particles');
+      for (let i = 0; i < 20; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        particle.style.left = Math.random() * 100 + 'vw';
+        particle.style.animationDelay = Math.random() * 15 + 's';
+        particle.style.animationDuration = (15 + Math.random() * 10) + 's';
+        container.appendChild(particle);
+      }
+    }
+    createParticles();
+    
+    // WebGL Glass Effect
+    const canvas = document.getElementById('webgl-canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.z = 5;
+    
+    // Create stained glass shards
+    const geometry = new THREE.BufferGeometry();
+    const vertices = [];
+    const colors = [];
+    
+    const glassColors = [
+      new THREE.Color(0x8b0000), // red
+      new THREE.Color(0x003366), // blue
+      new THREE.Color(0xd4af37), // gold
+      new THREE.Color(0x006633), // emerald
+      new THREE.Color(0x4b0082), // indigo
+    ];
+    
+    for (let i = 0; i < 50; i++) {
+      const x = (Math.random() - 0.5) * 20;
+      const y = (Math.random() - 0.5) * 20;
+      const z = (Math.random() - 0.5) * 5;
+      const size = 0.5 + Math.random() * 2;
+      
+      // Irregular shapes (triangles/quads)
+      const type = Math.random() > 0.5 ? 'triangle' : 'quad';
+      
+      if (type === 'triangle') {
+        vertices.push(x, y, z);
+        vertices.push(x + size, y - size, z);
+        vertices.push(x - size/2, y - size*1.5, z);
+      } else {
+        vertices.push(x, y, z);
+        vertices.push(x + size, y, z);
+        vertices.push(x + size, y + size, z);
+        vertices.push(x, y + size, z);
+      }
+      
+      const color = glassColors[Math.floor(Math.random() * glassColors.length)];
+      colors.push(color.r, color.g, color.b);
+      colors.push(color.r, color.g, color.b);
+      colors.push(color.r, color.g, color.b);
+      if (type === 'quad') {
+        colors.push(color.r, color.g, color.b);
+      }
+    }
+    
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    
+    const material = new THREE.PointsMaterial({
+      size: 0.1,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.6,
+      blending: THREE.AdditiveBlending,
+    });
+    
+    const particles = new THREE.Points(geometry, material);
+    scene.add(particles);
+    
+    // Mouse interaction
+    let mouseX = 0;
+    let mouseY = 0;
+    let targetX = 0;
+    let targetY = 0;
+    
+    const windowHalfX = window.innerWidth / 2;
+    const windowHalfY = window.innerHeight / 2;
+    
+    document.addEventListener('mousemove', (event) => {
+      mouseX = (event.clientX - windowHalfX) * 0.001;
+      mouseY = (event.clientY - windowHalfY) * 0.001;
+    });
+    
+    // Animation loop
+    const clock = new THREE.Clock();
+    
+    function animate() {
+      requestAnimationFrame(animate);
+      
+      const elapsedTime = clock.getElapsedTime();
+      
+      targetX = mouseX * 0.5;
+      targetY = mouseY * 0.5;
+      
+      particles.rotation.y += 0.002;
+      particles.rotation.x += (targetY - particles.rotation.x) * 0.05;
+      particles.rotation.y += (targetX - particles.rotation.y) * 0.05;
+      
+      // Gentle wave motion
+      const positions = particles.geometry.attributes.position.array;
+      for (let i = 0; i < positions.length; i += 3) {
+        positions[i + 2] = Math.sin(elapsedTime * 0.5 + positions[i]) * 0.5;
+      }
+      particles.geometry.attributes.position.needsUpdate = true;
+      
+      renderer.render(scene, camera);
+    }
+    
+    animate();
+    
+    // Resize handler
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+    
+    // Form submission
+    document.querySelector('.submit-btn').addEventListener('click', (e) => {
+      e.preventDefault();
+      const btn = document.querySelector('.submit-btn');
+      btn.innerHTML = 'Envoyé';
+      btn.style.borderColor = '#006633';
+      btn.style.color = '#006633';
+      setTimeout(() => {
+        btn.innerHTML = 'Envoyer';
+        btn.style.borderColor = '';
+        btn.style.color = '';
+      }, 3000);
+    });
+    
+    // Reveal on scroll
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: '0px 0px -100px 0px'
+    };
+    
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.style.opacity = '1';
+          entry.target.style.transform = 'translateY(0)';
+        }
+      });
+    }, observerOptions);
+    
+    document.querySelectorAll('.process-step, .contact-item').forEach(el => {
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(30px)';
+      el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+      observer.observe(el);
+    });
+  </script>
+</body>
+</html>

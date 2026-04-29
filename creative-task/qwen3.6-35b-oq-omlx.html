@@ -1,0 +1,842 @@
+<!--
+Another weak performance from the oQ oMLX variant. 
+On the first prompt, it delivered a broken website that was mainly black and you could only see the title, the menu and the footer. This was after it already regenerated the HTML once. So, it did 2 different HTML files in the first prompt, one it didn't think it was good enough and the second one didn't render. 
+Actually, the first file - was curious so I copy pasted it into another file to see what it created - had one impressive piece of design. It was this sphere with almost kaleidoscope designs for the tiles. The rest of the site was completely broken and full of white space but that globe was cool. 
+On the second prompt, when it was given feedback as to what was broken - from the dev console - it started looping, fixing stuff that was not broken and consuming a ton of tokens going in circles.
+Overall, a very weak result which I am not even sure how to evaluate, it is worse than gemma4 26b? Maybe. All the works have the same icons, there's no difference between them. 
+At least gemma 26b had a changing background when you would hover on the works. 
+74834 tokens 412.9 t/s prompt processing / 39.6 generation
+Personally, after all these tests I wouldn't touch the oQ quants with a ten foot pole. 
+831 lines of code. 
+-->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lumi&egrave;re Atelier — Museum-Quality Stained Glass</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+--black:#060608;--void:#020204;
+--gold:#c9a84c;--gold-pale:#e8d5a3;
+--rubin:#8b1a2b;--sapphire:#1a3a6b;--emerald:#1a5e3a;
+--amber:#b8860b;--violet:#4a1a6b;
+--ivory:#f0e6d3;--ivory-dim:rgba(240,230,211,.6);
+--serif:'Cormorant Garamond',Georgia,'Times New Roman',serif;
+--sans:Inter,system-ui,-apple-system,Helvetica,Arial,sans-serif;
+}
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500&family=Inter:wght@300;400;500&display=swap');
+html{scroll-behavior:smooth}
+body{
+background:var(--black);color:var(--ivory);
+font-family:var(--sans);font-weight:300;
+line-height:1.7;overflow-x:hidden;
+-webkit-font-smoothing:antialiased;
+}
+
+/* ── Grain Overlay ── */
+.grain{
+position:fixed;inset:0;pointer-events:none;z-index:9999;opacity:.035;
+background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+background-size:128px 128px;
+}
+
+/* ── Vignette ── */
+.vignette{
+position:fixed;inset:0;pointer-events:none;z-index:9998;
+background:radial-gradient(ellipse at 50% 50%,transparent 50%,rgba(2,2,4,.6) 100%);
+}
+
+/* ── Navigation ── */
+#nav{
+position:fixed;top:0;left:0;right:0;z-index:1000;
+display:flex;align-items:center;justify-content:space-between;
+padding:1.5rem 3rem;
+transition:background .4s,backdrop-filter .4s;
+}
+.nav-brand{display:flex;align-items:center;gap:.75rem}
+.nav-line{width:2rem;height:1px;background:var(--gold);display:block}
+.nav-name{
+font-family:var(--serif);font-size:1.1rem;font-weight:400;
+letter-spacing:.08em;text-transform:uppercase;color:var(--ivory);
+}
+.nav-links{display:flex;gap:2.5rem}
+.nav-links a{
+font-size:.7rem;font-weight:400;letter-spacing:.15em;
+text-transform:uppercase;color:var(--ivory-dim);
+text-decoration:none;transition:color .3s;position:relative;
+}
+.nav-links a::after{
+content:'';position:absolute;bottom:-4px;left:0;width:0;height:1px;
+background:var(--gold);transition:width .3s;
+}
+.nav-links a:hover{color:var(--gold)}
+.nav-links a:hover::after{width:100%}
+
+/* ── Hero Canvas ── */
+#hero-canvas{
+position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;
+}
+#light-overlay{
+position:fixed;inset:0;z-index:2;pointer-events:none;
+background:radial-gradient(ellipse at 50% 50%,
+hsla(30,60%,15%,.8),hsla(220,40%,5%,.3),transparent 70%);
+transition:background 2s;
+}
+
+/* ── Hero Content ── */
+#hero{
+position:relative;z-index:10;height:100vh;
+display:flex;align-items:center;justify-content:center;
+text-align:center;
+}
+.hero-zenith{display:flex;flex-direction:column;align-items:center;gap:3rem}
+.hero-frame{display:flex;flex-direction:column;align-items:center;gap:1.5rem}
+.hero-lettermark{
+font-family:var(--serif);font-size:1.2rem;font-weight:300;
+color:var(--gold);letter-spacing:.5em;margin-bottom:1rem;
+}
+.hero-title{
+font-family:var(--serif);font-size:clamp(3rem,8vw,7rem);
+font-weight:300;line-height:1.1;letter-spacing:.02em;
+background:linear-gradient(180deg,var(--ivory) 0%,var(--gold-pale) 100%);
+-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+background-clip:text;
+}
+.hero-subtitle{
+font-size:.85rem;font-weight:300;letter-spacing:.2em;
+text-transform:uppercase;color:var(--ivory-dim);
+}
+.scroll-hint{display:flex;flex-direction:column;align-items:center;gap:.75rem;margin-top:2rem}
+.scroll-line{
+width:1px;height:50px;background:linear-gradient(to bottom,var(--gold),transparent);
+animation:pulse 2s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:.3;transform:scaleY(.7)}50%{opacity:1;transform:scaleY(1)}}
+.scroll-text{
+font-size:.6rem;letter-spacing:.25em;text-transform:uppercase;color:var(--ivory-dim);
+}
+
+/* ── Sections ── */
+section{
+position:relative;z-index:10;padding:10rem 3rem;
+}
+.story-content,.process-content,.portfolio-content,.contact-content{
+max-width:1200px;margin:0 auto;
+}
+.section-label{
+font-size:.65rem;letter-spacing:.3em;text-transform:uppercase;
+color:var(--gold);margin-bottom:2rem;font-weight:400;
+}
+.section-title{
+font-family:var(--serif);font-size:clamp(2.5rem,5vw,4.5rem);
+font-weight:300;line-height:1.15;margin-bottom:4rem;
+}
+
+/* ── Story Section ── */
+.story-grid{display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:start}
+.story-text p{
+font-family:var(--serif);font-size:1.15rem;font-weight:300;
+line-height:1.9;color:var(--ivory-dim);margin-bottom:1.5rem;
+}
+.story-text p:first-child::first-letter{
+font-family:var(--serif);font-size:3.5rem;float:left;
+line-height:1;margin-right:.5em;color:var(--gold);
+}
+.story-image{position:relative;height:500px}
+.glass-panel{
+position:absolute;border-radius:2px;
+animation:float 8s ease-in-out infinite;
+}
+.glass-panel.panel-1{
+width:180px;height:220px;top:10%;left:10%;
+background:linear-gradient(135deg,var(--sapphire),var(--rubin));
+opacity:.7;transform:rotate(-8deg);animation-delay:0s;
+}
+.glass-panel.panel-2{
+width:140px;height:180px;top:20%;right:15%;
+background:linear-gradient(200deg,var(--emerald),var(--gold));
+opacity:.6;transform:rotate(5deg);animation-delay:-2s;
+}
+.glass-panel.panel-3{
+width:120px;height:160px;bottom:10%;left:30%;
+background:linear-gradient(160deg,var(--violet),var(--sapphire));
+opacity:.65;transform:rotate(-3deg);animation-delay:-4s;
+}
+@keyframes float{
+0%,100%{transform:translateY(0) rotate(var(--r,0deg))}
+50%{transform:translateY(-15px) rotate(var(--r,0deg))}
+}
+.story-quote{
+position:absolute;bottom:0;left:0;right:0;padding:2rem;
+border-left:1px solid var(--gold);
+}
+.story-quote blockquote{
+font-family:var(--serif);font-size:1.3rem;font-weight:300;
+font-style:italic;line-height:1.6;color:var(--ivory);
+}
+.story-quote cite{
+display:block;margin-top:.75rem;font-size:.75rem;
+font-style:normal;letter-spacing:.1em;color:var(--ivory-dim);
+}
+
+/* ── Process Section ── */
+.process-section{background:linear-gradient(180deg,var(--black),rgba(20,15,10,.5),var(--black))}
+.process-timeline{display:flex;flex-direction:column;gap:0;position:relative}
+.process-timeline::before{
+content:'';position:absolute;left:24px;top:0;bottom:0;
+width:1px;background:linear-gradient(to bottom,transparent,var(--gold),transparent);
+}
+.process-step{
+display:flex;gap:2.5rem;padding:2.5rem 0;
+position:relative;align-items:flex-start;
+}
+.step-number{
+font-family:var(--serif);font-size:2.5rem;font-weight:300;
+color:var(--gold);min-width:50px;padding-left:10px;
+position:relative;
+}
+.step-number::after{
+content:'';position:absolute;left:18px;top:50%;
+width:8px;height:8px;border-radius:50%;
+background:var(--gold);transform:translateY(-50%);
+}
+.step-content h3{
+font-family:var(--serif);font-size:1.5rem;font-weight:400;
+margin-bottom:.75rem;color:var(--ivory);
+}
+.step-content p{
+font-size:1rem;line-height:1.8;color:var(--ivory-dim);max-width:600px;
+}
+
+/* ── Portfolio Section ── */
+.portfolio-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2rem}
+.portfolio-item{
+position:relative;overflow:hidden;cursor:pointer;
+border:1px solid rgba(201,168,76,.1);
+transition:border-color .4s,transform .4s;
+}
+.portfolio-item:hover{
+border-color:rgba(201,168,76,.3);
+transform:translateY(-4px);
+}
+.portfolio-canvas{
+display:block;width:100%;height:auto;
+filter:brightness(.9) contrast(1.1);
+transition:filter .4s,transform .6s;
+}
+.portfolio-item:hover .portfolio-canvas{
+filter:brightness(1) contrast(1.15);
+transform:scale(1.02);
+}
+.portfolio-info{padding:1.5rem}
+.portfolio-year{
+font-size:.6rem;letter-spacing:.25em;text-transform:uppercase;
+color:var(--gold);margin-bottom:.5rem;
+}
+.portfolio-info h3{
+font-family:var(--serif);font-size:1.3rem;font-weight:400;
+margin-bottom:.5rem;color:var(--ivory);
+}
+.portfolio-info p{
+font-size:.85rem;line-height:1.6;color:var(--ivory-dim);
+}
+
+/* ── Contact Section ── */
+.contact-section{background:linear-gradient(180deg,var(--black),rgba(10,8,6,.5))}
+.contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:6rem;align-items:start}
+.contact-info{font-style:normal}
+.contact-info p{
+font-family:var(--serif);font-size:1.2rem;font-weight:300;
+line-height:2;color:var(--ivory-dim);
+}
+.contact-info a{
+color:var(--gold);text-decoration:none;
+border-bottom:1px solid rgba(201,168,76,.3);
+transition:border-color .3s;
+}
+.contact-info a:hover{border-color:var(--gold)}
+.contact-form-wrap{padding-top:1rem}
+.form-group{margin-bottom:2rem}
+.form-group label{
+display:block;font-size:.65rem;letter-spacing:.2em;
+text-transform:uppercase;color:var(--gold);margin-bottom:.75rem;
+}
+.form-group input,.form-group textarea{
+width:100%;background:transparent;border:none;
+border-bottom:1px solid rgba(240,230,211,.15);
+padding:.75rem 0;color:var(--ivory);
+font-family:var(--serif);font-size:1.1rem;font-weight:300;
+outline:none;transition:border-color .3s;
+}
+.form-group input:focus,.form-group textarea:focus{
+border-color:var(--gold);
+}
+.form-group textarea{resize:vertical;min-height:120px}
+.form-submit{
+background:transparent;border:1px solid var(--gold);
+color:var(--gold);padding:1rem 3rem;font-size:.7rem;
+letter-spacing:.2em;text-transform:uppercase;cursor:pointer;
+font-family:var(--sans);position:relative;overflow:hidden;
+transition:color .4s;
+}
+.form-submit:hover{color:var(--black)}
+.form-submit::before{
+content:'';position:absolute;inset:0;background:var(--gold);
+transform:translateX(-100%);transition:transform .4s;
+}
+.form-submit:hover::before{transform:translateX(0)}
+.form-submit span{position:relative;z-index:1}
+
+/* ── Footer ── */
+footer{
+position:relative;z-index:10;padding:3rem;
+border-top:1px solid rgba(240,230,211,.06);
+}
+.footer-content{
+max-width:1200px;margin:0 auto;
+display:flex;justify-content:space-between;align-items:center;
+}
+.footer-content p{font-size:.7rem;color:rgba(240,230,211,.3);letter-spacing:.05em}
+.footer-links{display:flex;gap:2rem}
+.footer-links a{
+font-size:.65rem;letter-spacing:.15em;text-transform:uppercase;
+color:rgba(240,230,211,.3);text-decoration:none;
+transition:color .3s;
+}
+.footer-links a:hover{color:var(--gold)}
+
+/* ── Scroll reveals ── */
+.fade-in{opacity:0;transform:translateY(30px);transition:opacity .8s ease,transform .8s ease}
+.fade-in.visible{opacity:1;transform:translateY(0)}
+
+/* ── Responsive ── */
+@media(max-width:900px){
+section{padding:6rem 1.5rem}
+#nav{padding:1rem 1.5rem}
+.nav-links{gap:1.2rem}
+.nav-links a{font-size:.6rem}
+.story-grid,.contact-grid{grid-template-columns:1fr;gap:2rem}
+.story-image{height:300px}
+.portfolio-grid{grid-template-columns:1fr 1fr;gap:1rem}
+.step-number{font-size:1.8rem}
+.footer-content{flex-direction:column;gap:1rem;text-align:center}
+}
+@media(max-width:600px){
+.nav-links{display:none}
+.portfolio-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<canvas id="hero-canvas"></canvas>
+<div id="light-overlay"></div>
+<div class="grain"></div>
+<div class="vignette"></div>
+
+<nav id="nav">
+<div class="nav-brand">
+<span class="nav-line"></span>
+<span class="nav-name">Lumi&egrave;re Atelier</span>
+</div>
+<div class="nav-links">
+<a href="#story">Studio</a>
+<a href="#process">Commission</a>
+<a href="#portfolio">Works</a>
+<a href="#contact">Contact</a>
+</div>
+</nav>
+
+<header id="hero">
+<div class="hero-zenith">
+<div class="hero-frame">
+<div class="hero-lettermark">L</div>
+<h1 class="hero-title">Lumi&egrave;re<br>Atelier</h1>
+<p class="hero-subtitle">Museum-quality stained glass &middot; Lyon since 1987</p>
+</div>
+<div class="scroll-hint">
+<span class="scroll-line"></span>
+<span class="scroll-text">Scroll to enter</span>
+</div>
+</div>
+</header>
+
+<section id="story">
+<div class="story-content">
+<div class="section-label fade-in">The Studio</div>
+<h2 class="section-title fade-in">Where Light<br>Weds Glass</h2>
+<div class="story-grid">
+<div class="story-text fade-in">
+<p>In the heart of Lyon&rsquo;s 2nd arrondissement, where the R&ocirc;ne bends toward the Mediterranean, Lumi&egrave;re Atelier has spent nearly four decades transforming sheets of colored glass into architectural poetry. We do not make windows. We sculpt light itself &mdash; capturing the fleeting quality of dawn on the Alps, the deep jade of lichen on ancient stone, the exact amber that pools in a cathedral at vespers.</p>
+<p>Every piece that leaves our atelier carries the mark of hands that have learned, through twenty thousand hours of lead and copper foil, that glass does not merely transmit light. It remembers it. It holds the memory of fire and flame, of sand fused in the belly of a furnace, of colour born from minerals and accident.</p>
+<p>Our work adorns private chapels and parliamentary chambers, museum restoration projects and the front doors of people who simply understand that a room without light is a room without soul.</p>
+</div>
+<div class="story-image fade-in">
+<div class="glass-panel panel-1"></div>
+<div class="glass-panel panel-2"></div>
+<div class="glass-panel panel-3"></div>
+<div class="story-quote">
+<blockquote>&ldquo;We don&rsquo;t design installations. We negotiate between light and material until they reach an agreement.&rdquo;</blockquote>
+<cite>&mdash; Margaux Delacroix, Founder &amp; Artistic Director</cite>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<section id="process">
+<div class="process-content">
+<div class="section-label fade-in">The Commission</div>
+<h2 class="section-title fade-in">From First<br>Light to Final Fit</h2>
+<div class="process-timeline">
+<div class="process-step fade-in">
+<div class="step-number">01</div>
+<div class="step-content">
+<h3>Atelier Visit</h3>
+<p>You visit us in our Lyon workshop. We drink coffee, you describe the space, and we begin to see the light together. This conversation &mdash; never rushed, never billed &mdash; is where every piece is born.</p>
+</div>
+</div>
+<div class="process-step fade-in">
+<div class="step-number">02</div>
+<div class="step-content">
+<h3>Design &amp; Mapping</h3>
+<p>We produce detailed drawings, colour studies on actual glass, and, for larger commissions, a 1:1 cardboard mock-up. You hold the design in your hands. You feel its weight, its transparency, its truth.</p>
+</div>
+</div>
+<div class="process-step fade-in">
+<div class="step-number">03</div>
+<div class="step-content">
+<h3>Cutting &amp; Firing</h3>
+<p>Our cutters select each pane by hand &mdash; no two sheets of ruby red are identical. Coloured glass is fused in our kiln at 700&deg;C, creating glass with depth that painted surfaces can never achieve.</p>
+</div>
+</div>
+<div class="process-step fade-in">
+<div class="step-number">04</div>
+<div class="step-content">
+<h3>Assembly &amp; Caming</h3>
+<p>Using traditional H-soldering or copper foil, we assemble each piece. The lead caming is not merely structural &mdash; its patina, its colour, its weight is chosen to complement the glass it holds.</p>
+</div>
+</div>
+<div class="process-step fade-in">
+<div class="step-number">05</div>
+<div class="step-content">
+<h3>Installation</h3>
+<p>Our team installs each piece in person. We fit, we adjust, we test the light at different hours of the day. A stained glass installation is not finished until the light agrees with it.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<section id="portfolio">
+<div class="portfolio-content">
+<div class="section-label fade-in">Selected Works</div>
+<h2 class="section-title fade-in">Pieces That<br>Bear Light</h2>
+<div class="portfolio-grid">
+
+<div class="portfolio-item fade-in" data-color="sapphire">
+<canvas class="portfolio-canvas" width="400" height="500"></canvas>
+<div class="portfolio-info">
+<div class="portfolio-year">2024</div>
+<h3>The Azure Vault</h3>
+<p>Cathedral of Saint-Jean, Lyon<br>Tracery window, leaded glass with cobalt and gold leaf</p>
+</div>
+</div>
+
+<div class="portfolio-item fade-in" data-color="emerald">
+<canvas class="portfolio-canvas" width="400" height="500"></canvas>
+<div class="portfolio-info">
+<div class="portfolio-year">2023</div>
+<h3>Verdant Passage</h3>
+<p>Conservatoire de Paris, Grand Foyer<br>32-panel screen, emerald iridescent glass</p>
+</div>
+</div>
+
+<div class="portfolio-item fade-in" data-color="amber">
+<canvas class="portfolio-canvas" width="400" height="500"></canvas>
+<div class="portfolio-info">
+<div class="portfolio-year">2023</div>
+<h3>Candlelight Archive</h3>
+<p>Biblioth&egrave;que Mazarine, Paris<br>Reading room lantern, amber dichroic with hand-blown opal</p>
+</div>
+</div>
+
+<div class="portfolio-item fade-in" data-color="rubin">
+<canvas class="portfolio-canvas" width="400" height="500"></canvas>
+<div class="portfolio-info">
+<div class="portfolio-year">2022</div>
+<h3>Cardinal&rsquo;s Breath</h3>
+<p>Ch&acirc;teau de Chenonceau, Loire Valley<br>Stairwell installation, ruby flash glass with acid-etched details</p>
+</div>
+</div>
+
+<div class="portfolio-item fade-in" data-color="violet">
+<canvas class="portfolio-canvas" width="400" height="500"></canvas>
+<div class="portfolio-info">
+<div class="portfolio-year">2022</div>
+<h3>Twilight Codex</h3>
+<p>Fondation Louis Vuitton, Paris<br>Twelve-panel triptych, violet cathedral glass with silver stain</p>
+</div>
+</div>
+
+<div class="portfolio-item fade-in" data-color="gold">
+<canvas class="portfolio-canvas" width="400" height="500"></canvas>
+<div class="portfolio-info">
+<div class="portfolio-year">2021</div>
+<h3>Horizon Meridian</h3>
+<p>Palais du Parlement, Lyon<br>Apse window, millefiori cane with flashed ruby and gold ruby</p>
+</div>
+</div>
+
+</div>
+</div>
+</section>
+
+<section id="contact">
+<div class="contact-content">
+<div class="section-label fade-in">Commission Enquiry</div>
+<h2 class="section-title fade-in">Begin the<br>Conversation</h2>
+<div class="contact-grid">
+<div class="contact-info fade-in">
+<address>
+<p>Lumi&egrave;re Atelier</p>
+<p>42 Rue Merci&egrave;re</p>
+<p>69002 Lyon, France</p>
+<p>&nbsp;</p>
+<p>By appointment only</p>
+<p>&nbsp;</p>
+<p><a href="mailto:atelier@lumiere-atelier.fr">atelier@lumiere-atelier.fr</a></p>
+<p>+33 (0)4 78 42 19 87</p>
+</address>
+</div>
+<div class="contact-form-wrap fade-in">
+<form class="contact-form" onsubmit="return false;">
+<div class="form-group">
+<label for="name">Your Name</label>
+<input type="text" id="name" required>
+</div>
+<div class="form-group">
+<label for="email">Email</label>
+<input type="email" id="email" required>
+</div>
+<div class="form-group">
+<label for="project">Project Description</label>
+<textarea id="project" rows="5" required></textarea>
+</div>
+<button type="submit" class="form-submit">
+<span>Send Enquiry</span>
+</button>
+</form>
+</div>
+</div>
+</div>
+</section>
+
+<footer>
+<div class="footer-content">
+<p>&copy; 2025 Lumi&egrave;re Atelier. All rights reserved.</p>
+<div class="footer-links">
+<a href="#story">Studio</a>
+<a href="#process">Commission</a>
+<a href="#portfolio">Works</a>
+<a href="#contact">Contact</a>
+</div>
+</div>
+</footer>
+
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+/* ═══════════════════════════════════════════
+   THREE.JS STAINED GLASS HERO
+   ═══════════════════════════════════════════ */
+const c=document.getElementById('hero-canvas'),
+r=new THREE.WebGLRenderer({c,antialias:true,alpha:true}),
+s=new THREE.Scene(),
+cam=new THREE.PerspectiveCamera(45,innerWidth/innerHeight,.1,100);
+cam.position.set(0,0,6);
+r.setSize(innerWidth,innerHeight);
+r.setPixelRatio(Math.min(devicePixelRatio,2));
+r.toneMapping=THREE.ACESFilmicToneMapping;
+r.toneMappingExposure=1.2;
+
+// Panel
+const pg=new THREE.IcosahedronGeometry(2,3),
+pp=pg.attributes.position,
+cl=[0x8b1a2b,0x1a3a6b,0x1a5e3a,0xb8860b,0x4a1a6b,0xc9a84c,0x2a4a8b,0x6b1a3a];
+const cp=[];
+for(let i=0;i<pp.count;i++){
+const t=new THREE.Color(cl[i%cl.length]);cp.push(t.r,t.g,t.b);
+}
+pg.setAttribute('color',new THREE.Float32BufferAttribute(cp,3));
+const pm=new THREE.MeshPhysicalMaterial({
+vertexColors:true,transparent:true,opacity:.85,
+roughness:.05,metalness:0,transmission:.9,thickness:.5,
+ior:1.5,side:THREE.DoubleSide,depthWrite:false,
+});
+const panel=new THREE.Mesh(pg,pm);s.add(panel);
+
+// Caming wireframe
+const wf=new THREE.LineSegments(
+new THREE.WireframeGeometry(new THREE.IcosahedronGeometry(2.005,3)),
+new THREE.LineBasicMaterial({color:0x3a3a3a,transparent:true,opacity:.35})
+);panel.add(wf);
+
+// Frame
+const fg=new THREE.TorusGeometry(2.6,.04,8,64);
+const fm=new THREE.MeshStandardMaterial({color:0x2a2218,roughness:.6,metalness:.4});
+s.add(new THREE.Mesh(fg,fm));
+const fi=new THREE.TorusGeometry(2.45,.02,8,64);
+const fi2=new THREE.MeshStandardMaterial({color:0xc9a84c,roughness:.3,metalness:.7});
+s.add(new THREE.Mesh(fi,fi2));
+
+// Lights
+s.add(new THREE.AmbientLight(0x222222,.5));
+const lcs=[0x8b1a2b,0x1a3a6b,0x1a5e3a,0xb8860b,0xc9a84c];
+const pl=[];
+lcs.forEach((col,i)=>{
+const l=new THREE.PointLight(col,2,15);
+l.position.set((Math.random()-.5)*6,(Math.random()-.5)*6,2+Math.random()*2);
+s.add(l);pl.push(l);
+});
+
+// Particles
+const pc=600,
+pGeo=new THREE.BufferGeometry(),
+pPos=new Float32Array(pc*3);
+for(let i=0;i<pc*3;i++) pPos[i]=(Math.random()-.5)*16;
+pGeo.setAttribute('position',new THREE.BufferAttribute(pPos,3));
+const pMat=new THREE.PointsMaterial({
+color:0xffeedd,size:.03,transparent:true,opacity:.5,
+sizeAttenuation:true,blending:THREE.AdditiveBlending,depthWrite:false,
+});
+const ptk=new THREE.Points(pGeo,pMat);s.add(ptk);
+
+// Scroll
+let sp=0,tp=0;
+window.addEventListener('scroll',()=>{
+tp=innerHeight>0?scrollY/(document.documentElement.scrollHeight-innerHeight):0;
+},{passive:true});
+
+// Animate
+const clock=new THREE.Clock();
+function animate(){
+requestAnimationFrame(animate);
+const t=clock.getElapsedTime();
+sp+=(tp-sp)*.05;
+
+panel.rotation.y=t*.1+sp*Math.PI*2;
+panel.rotation.x=Math.sin(t*.05)*.1+sp*Math.PI*.5;
+
+cam.position.x=Math.sin(sp*Math.PI)*1.5;
+cam.position.y=Math.cos(sp*Math.PI*.5)*.5;
+cam.lookAt(0,0,0);
+
+for(let i=0;i<pc*3;i+=3){
+pPos[i+1]+=Math.sin(t+i)*.001;
+pPos[i]+=Math.cos(t*.5+i*.1)*.0005;
+}
+pGeo.attributes.position.needsUpdate=true;
+
+pl.forEach((l,i)=>{l.intensity=1.5+Math.sin(t*.3+i*1.5)*.8;});
+
+const op=Math.max(0,1-sp*4);
+c.style.opacity=op;
+document.getElementById('light-overlay').style.opacity=op*.3;
+
+const h=(t*.02+sp)%1;
+document.getElementById('light-overlay').style.background=
+`radial-gradient(ellipse at 50% 50%,hsla(${20+h*340},60%,15%,.8),hsla(${200+h*100},40%,5%,.3),transparent 70%)`;
+
+r.render(s,cam);
+}
+animate();
+
+addEventListener('resize',()=>{
+cam.aspect=innerWidth/innerHeight;
+cam.updateProjectionMatrix();
+r.setSize(innerWidth,innerHeight);
+});
+
+/* ═══════════════════════════════════════════
+   PORTFOLIO PROCEDURAL CANVAS ART
+   ═══════════════════════════════════════════ */
+function hex2rgb(h){return[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]}
+function rgb2hex(r,g,b){return'#'+[r,g,b].map(v=>Math.max(0,Math.min(255,v)).toString(16).padStart(2,'0')).join('')}
+function lc(h,a){const[r,g,b]=hex2rgb(h);return rgb2hex(r+a,g+a,b+a)}
+function dc(h,a){const[r,g,b]=hex2rgb(h);return rgb2hex(r-a,g-a,b-a)}
+
+function drawGlass(cvs,theme){
+const ctx=cvs.getContext('2d'),w=cvs.width,h=cvs.height;
+const cx=w/2,cy=h/2,mr=Math.min(w,h)*.4;
+const themes={
+sapphire:{p:'#1a3a8b',s:'#4a7ab8',a:'#c9a84c',l:'#2a2a2a',g:'#3366cc'},
+emerald:{p:'#1a5e3a',s:'#3a9e6a',a:'#c9a84c',l:'#2a2a2a',g:'#228B22'},
+amber:{p:'#b8860b',s:'#daa520',a:'#8b1a2b',l:'#2a2a2a',g:'#daa520'},
+rubin:{p:'#8b1a2b',s:'#c4304a',a:'#c9a84c',l:'#2a2a2a',g:'#cc2244'},
+violet:{p:'#4a1a6b',s:'#7a4aaa',a:'#c9a84c',l:'#2a2a2a',g:'#6633aa'},
+gold:{p:'#c9a84c',s:'#daa520',a:'#8b1a2b',l:'#2a2a2a',g:'#daa520'},
+};
+const th=themes[theme]||themes.sapphire;
+
+ctx.fillStyle='#0a0a12';ctx.fillRect(0,0,w,h);
+
+// Outer ring segments
+for(let i=0;i<12;i++){
+const a=i/12*Math.PI*2-Math.PI/2;
+ctx.save();ctx.globalAlpha=.85;
+ctx.beginPath();
+ctx.moveTo(cx,cy);
+ctx.arc(cx,cy,mr*.92,a,a+Math.PI/6);
+ctx.lineTo(cx,cy);
+ctx.arc(cx,cy,mr*.55,a+Math.PI/6,a,true);
+ctx.closePath();
+const g=ctx.createRadialGradient(cx,cy,mr*.3,cx,cy,mr*.9);
+g.addColorStop(0,lc(i%3===0?th.s:th.p,20));
+g.addColorStop(1,dc(i%3===0?th.s:th.p,30));
+ctx.fillStyle=g;ctx.fill();
+ctx.lineWidth=2;ctx.strokeStyle=th.l;ctx.stroke();
+ctx.restore();
+}
+
+// Diamond ring
+for(let i=0;i<16;i++){
+const a=i/16*Math.PI*2-Math.PI/2;
+ctx.save();ctx.globalAlpha=.7;
+const r1=mr*.35,r2=mr*.55;
+ctx.beginPath();
+ctx.moveTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1);
+ctx.lineTo(cx+Math.cos(a+.1)*r2,cy+Math.sin(a+.1)*r2);
+ctx.lineTo(cx+Math.cos(a+.2)*r1,cy+Math.sin(a+.2)*r1);
+ctx.lineTo(cx+Math.cos(a+.1)*(r2*.7),cy+Math.sin(a+.1)*(r2*.7));
+ctx.closePath();
+const col=i%2===0?th.a:th.p;
+const grd=ctx.createRadialGradient(cx,cy,0,cx,cy,mr);
+grd.addColorStop(0,lc(col,40));grd.addColorStop(1,col);
+
+ctx.fillStyle=grd;ctx.fill();
+ctx.lineWidth=2;ctx.strokeStyle=th.l;ctx.stroke();
+ctx.restore();
+}
+
+// Inner rays
+for(let i=0;i<8;i++){
+const a=i/8*Math.PI*2-Math.PI/2;
+ctx.save();ctx.globalAlpha=.9;
+const dx=Math.cos(a),dy=Math.sin(a);
+ctx.beginPath();
+ctx.moveTo(cx+dx*.08*mr-10,cy+dy*.08*mr-10);
+ctx.lineTo(cx+dx*.38*mr-16,cy+dy*.38*mr-16);
+ctx.lineTo(cx+dx*.38*mr+16,cy+dy*.38*mr+16);
+ctx.lineTo(cx+dx*.08*mr+10,cy+dy*.08*mr+10);
+ctx.closePath();
+const col2=i%2===0?th.p:th.s;
+const grd2=ctx.createLinearGradient(cx+dx*.08*mr,cy+dy*.08*mr,cx+dx*.38*mr,cy+dy*.38*mr);
+grd2.addColorStop(0,col2);grd2.addColorStop(.5,lc(col2,30));grd2.addColorStop(1,col2);
+ctx.fillStyle=g;ctx.fill();
+ctx.lineWidth=1.5;ctx.strokeStyle=th.l;ctx.stroke();
+ctx.restore();
+}
+
+// Center
+ctx.save();ctx.globalAlpha=.9;
+const cg=ctx.createRadialGradient(cx,cy,0,cx,cy,mr*.12);
+cg.addColorStop(0,lc(th.a,50));cg.addColorStop(.7,th.a);cg.addColorStop(1,dc(th.a,40));
+ctx.beginPath();ctx.arc(cx,cy,mr*.12,0,Math.PI*2);
+ctx.fillStyle=cg;ctx.fill();ctx.lineWidth=3;ctx.strokeStyle=th.l;ctx.stroke();
+
+for(let i=0;i<6;i++){
+const a1=i/6*Math.PI*2-Math.PI/2;
+const a2=(i+.5)/6*Math.PI*2-Math.PI/2;
+ctx.beginPath();
+ctx.moveTo(cx,cy);
+ctx.lineTo(cx+Math.cos(a1)*mr*.12,cy+Math.sin(a1)*mr*.12);
+ctx.lineTo(cx+Math.cos(a2)*mr*.08,cy+Math.sin(a2)*mr*.08);
+ctx.closePath();
+ctx.fillStyle=i%2===0?th.p:th.s;
+ctx.globalAlpha=.7;ctx.fill();
+ctx.lineWidth=1.5;ctx.strokeStyle=th.l;ctx.stroke();
+}
+ctx.restore();
+
+// Outer came
+ctx.save();ctx.lineWidth=4;ctx.strokeStyle=th.l;
+ctx.beginPath();ctx.arc(cx,cy,mr*.95,0,Math.PI*2);ctx.stroke();
+ctx.lineWidth=1;ctx.strokeStyle='rgba(201,168,76,.3)';
+ctx.beginPath();ctx.arc(cx,cy,mr*.92,0,Math.PI*2);ctx.stroke();
+ctx.restore();
+
+// Bottom diamonds
+const by=h-60;
+for(let i=0;i<5;i++){
+const bx=w*.15+i*(w*.7/4);
+ctx.save();ctx.globalAlpha=.5;
+ctx.beginPath();
+ctx.moveTo(bx,by-7);ctx.lineTo(bx+7,by);ctx.lineTo(bx,by+7);ctx.lineTo(bx-7,by);
+ctx.closePath();
+const bg=ctx.createLinearGradient(bx,by-7,bx,by+7);
+bg.addColorStop(0,th.a);bg.addColorStop(1,th.p);
+ctx.fillStyle=bg;ctx.fill();ctx.lineWidth=1;ctx.strokeStyle=th.l;ctx.stroke();
+ctx.restore();
+}
+
+// Texture
+ctx.save();ctx.globalAlpha=.03;
+for(let i=0;i<200;i++){
+ctx.fillStyle=Math.random()>.5?'#fff':'#000';
+ctx.fillRect(Math.random()*w,Math.random()*h,Math.random()*2,Math.random()*2);
+}
+ctx.restore();
+
+// Vignette
+const vg=ctx.createRadialGradient(cx,cy,mr*.3,cx,cy,mr*1.1);
+vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.5)');
+ctx.fillStyle=vg;ctx.fillRect(0,0,w,h);
+}
+
+document.querySelectorAll('.portfolio-canvas').forEach(c=>{
+drawGlass(c,c.parentElement.parentElement.dataset.color);
+});
+
+/* ═══════════════════════════════════════════
+   SCROLL REVEALS
+   ═══════════════════════════════════════════ */
+const obs=new IntersectionObserver(e=>{
+e.forEach(en=>{if(en.isIntersecting){en.target.classList.add('visible');obs.unobserve(en.target);}});
+},{threshold:.12,rootMargin:'0px 0px -40px 0px'});
+
+document.querySelectorAll('.fade-in').forEach((el,i)=>{
+el.style.transitionDelay=`${i % 6 * .06}s`;
+obs.observe(el);
+});
+
+/* ── Nav ── */
+addEventListener('scroll',()=>{
+const n=document.getElementById('nav');
+n.style.background=scrollY>80?'rgba(6,6,8,.85)':'transparent';
+n.style.backdropFilter=scrollY>80?'blur(12px)':'none';
+},{passive:true});
+
+document.querySelectorAll('a[href^="#"]').forEach(a=>{
+a.addEventListener('click',e=>{
+e.preventDefault();
+const t=document.querySelector(a.getAttribute('href'));
+if(t)t.scrollIntoView({behavior:'smooth'});
+});
+});
+
+/* ── Form ── */
+document.querySelector('.form-submit').addEventListener('click',function(){
+const s=this.querySelector('span');
+s.textContent='Enquiry Sent \u2014 Merci';
+this.style.borderColor='var(--gold)';
+setTimeout(()=>{s.textContent='Send Enquiry';this.style.borderColor='';},3000);
+});
+</script>
+</body>
+</html>

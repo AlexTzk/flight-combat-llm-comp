@@ -1,0 +1,1192 @@
+<!--31535 tokens 
+485 t/s 40.6 t/s
+Definitely a much better result than the last couple of rounds for this model when it finished in the last few places. 
+The website has a nice hero section with floating stained glass tiles. The text font is not great for this type of website but it's not terrible either
+The works area leaves a bit to be desired, it doesn't showcase anything special and the designs are very similar to each other. 
+The written content in the website is alright, nothing special. Overall its clear, easy to navigate and okay. Not exquisite but I would say its above average. 
+It took the model one prompt and no fixes were needed. 
+
+1182 lines of code
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumière Atelier | Bespoke Stained Glass</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --gold: #c5a059;
+            --gold-light: #e8d47a;
+            --gold-dark: #9e7a3b;
+            --deep-blue: #0a0f14;
+            --deep-purple: #1a1f2a;
+            --sapphire: #1e3a5f;
+            --amethyst: #4a3b5c;
+            --rose: #8b455b;
+            --ivory: #f5f0e6;
+            --glass-gradient: linear-gradient(135deg, rgba(197, 160, 89, 0.15) 0%, rgba(10, 15, 20, 0.85) 100%);
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Cormorant Garamond', 'Georgia', serif;
+            background: var(--deep-blue);
+            color: var(--ivory);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        .cursive {
+            font-family: 'Cormorant Garamond', 'Georgia', serif;
+        }
+
+        .sans {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 40px;
+        }
+
+        /* Canvas Background */
+        #art-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            padding: 30px 0;
+            z-index: 100;
+            transition: all 0.4s ease;
+        }
+
+        nav.scrolled {
+            padding: 15px 0;
+            background: rgba(10, 15, 20, 0.85);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 20px rgba(197, 160, 89, 0.1);
+        }
+
+        .nav-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--gold);
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            position: relative;
+        }
+
+        .logo span {
+            font-size: 14px;
+            display: block;
+            font-size: 12px;
+            font-family: 'Inter', sans-serif;
+            letter-spacing: 0.1em;
+            color: var(--gold-light);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 50px;
+        }
+
+        .nav-links a {
+            color: var(--ivory);
+            text-decoration: none;
+            font-size: 14px;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            position: relative;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 1px;
+            background: var(--gold);
+            transition: width 0.3s ease;
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        .nav-links a:hover {
+            color: var(--gold-light);
+        }
+
+        .menu-toggle {
+            display: none;
+            cursor: pointer;
+        }
+
+        .menu-icon {
+            width: 30px;
+            height: 2px;
+            background: var(--gold);
+            position: relative;
+        }
+
+        .menu-icon::before,
+        .menu-icon::after {
+            content: '';
+            position: absolute;
+            width: 30px;
+            height: 2px;
+            background: var(--gold);
+            left: 0;
+            transition: all 0.3s ease;
+        }
+
+        .menu-icon::before { top: -8px; }
+        .menu-icon::after { top: 8px; }
+
+        /* Hero Section */
+        .hero {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-content {
+            text-align: center;
+            z-index: 1;
+            opacity: 0;
+            animation: fadeInUp 1.2s ease forwards 0.5s;
+        }
+
+        .hero h1 {
+            font-size: clamp(60px, 12vw, 180px);
+            line-height: 0.9;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            margin-bottom: 30px;
+            color: var(--ivory);
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .hero h1 span {
+            color: var(--gold);
+            font-size: clamp(40px, 8vw, 120px);
+        }
+
+        .hero p {
+            font-size: clamp(18px, 2.5vw, 32px);
+            max-width: 600px;
+            margin: 0 auto 50px;
+            color: rgba(245, 240, 230, 0.85);
+            font-weight: 300;
+        }
+
+        .scroll-indicator {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: bounce 2s infinite;
+        }
+
+        .scroll-indicator::before {
+            content: '';
+            width: 2px;
+            height: 40px;
+            background: var(--gold);
+            display: block;
+        }
+
+        .scroll-indicator::after {
+            content: '';
+            position: absolute;
+            top: 45px;
+            left: -6px;
+            width: 14px;
+            height: 14px;
+            border-top: 2px solid var(--gold);
+            border-right: 2px solid var(--gold);
+            transform: rotate(45deg);
+            animation: bounce 2s infinite;
+        }
+
+        /* Section Styles */
+        .section {
+            padding: 150px 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        .section-title {
+            font-size: clamp(40px, 6vw, 80px);
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin-bottom: 80px;
+            color: var(--gold);
+            position: relative;
+            display: inline-block;
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            width: 100px;
+            height: 2px;
+            background: var(--gold);
+        }
+
+        /* Story Section */
+        .story {
+            background: var(--deep-purple);
+        }
+
+        .story-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 100px;
+            align-items: center;
+        }
+
+        .story-text h2 {
+            font-size: clamp(40px, 5vw, 60px);
+            font-weight: 400;
+            margin-bottom: 40px;
+            line-height: 1.2;
+        }
+
+        .story-text p {
+            font-size: clamp(18px, 2vw, 24px);
+            color: rgba(245, 240, 230, 0.75);
+            margin-bottom: 30px;
+            font-weight: 300;
+        }
+
+        .story-visual {
+            position: relative;
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .story-glass {
+            width: 100%;
+            height: 100%;
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+            animation: rotateGlass 60s linear infinite;
+        }
+
+        .story-glass::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: conic-gradient(
+                from 0deg,
+                rgba(197, 160, 89, 0.3) 0deg,
+                rgba(10, 15, 20, 0.8) 45deg,
+                rgba(30, 58, 95, 0.4) 90deg,
+                rgba(74, 59, 92, 0.3) 135deg,
+                rgba(139, 69, 91, 0.4) 180deg,
+                rgba(197, 160, 89, 0.3) 225deg,
+                rgba(10, 15, 20, 0.8) 270deg,
+                rgba(30, 58, 95, 0.4) 315deg,
+                rgba(197, 160, 89, 0.3) 360deg
+            );
+        }
+
+        .story-glass::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 80%;
+            background: radial-gradient(circle, rgba(197, 160, 89, 0.1) 0%, rgba(10, 15, 20, 0.95) 70%);
+            border-radius: 50%;
+        }
+
+        /* Process Section */
+        .process {
+            background: var(--deep-blue);
+        }
+
+        .process-steps {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 30px;
+        }
+
+        .process-step {
+            text-align: center;
+            position: relative;
+            padding: 60px 40px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 20px;
+            transition: all 0.4s ease;
+        }
+
+        .process-step:hover {
+            background: rgba(197, 160, 89, 0.05);
+            transform: translateY(-10px);
+        }
+
+        .process-number {
+            font-size: 80px;
+            font-weight: 700;
+            color: var(--gold);
+            opacity: 0.1;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+
+        .process-step h3 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: var(--gold);
+            font-weight: 400;
+            font-family: 'Cormorant Garamond', serif;
+        }
+
+        .process-step p {
+            font-size: 16px;
+            color: rgba(245, 240, 230, 0.6);
+            line-height: 1.8;
+        }
+
+        .process-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 30px;
+            border: 2px solid var(--gold);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.4s ease;
+        }
+
+        .process-step:hover .process-icon {
+            background: var(--gold);
+            box-shadow: 0 0 30px rgba(197, 160, 89, 0.4);
+        }
+
+        .process-icon::before {
+            content: '';
+            width: 30px;
+            height: 30px;
+            border-top: 3px solid var(--deep-blue);
+            border-right: 3px solid var(--deep-blue);
+            transform: rotate(-45deg);
+        }
+
+        /* Portfolio Section */
+        .portfolio {
+            background: linear-gradient(180deg, var(--deep-blue) 0%, var(--deep-purple) 100%);
+        }
+
+        .portfolio-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 40px;
+        }
+
+        .portfolio-item {
+            position: relative;
+            aspect-ratio: 4/3;
+            overflow: hidden;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.6s ease;
+        }
+
+        .portfolio-item:hover {
+            transform: scale(1.02);
+            box-shadow: 0 20px 60px rgba(197, 160, 89, 0.2);
+        }
+
+        .portfolio-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(197, 160, 89, 0.2) 0%, rgba(10, 15, 20, 0.9) 100%);
+            z-index: 1;
+            transition: all 0.4s ease;
+        }
+
+        .portfolio-item:hover::before {
+            background: linear-gradient(135deg, rgba(197, 160, 89, 0.1) 0%, rgba(10, 15, 20, 0.85) 100%);
+        }
+
+        .portfolio-content {
+            position: absolute;
+            bottom: 40px;
+            left: 40px;
+            z-index: 2;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.4s ease;
+        }
+
+        .portfolio-item:hover .portfolio-content {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .portfolio-item h3 {
+            font-size: 32px;
+            color: var(--gold);
+            margin-bottom: 10px;
+        }
+
+        .portfolio-item p {
+            font-size: 16px;
+            color: rgba(245, 240, 230, 0.75);
+        }
+
+        .portfolio-glass {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            border-radius: 20px;
+        }
+
+        /* Contact Section */
+        .contact {
+            background: var(--deep-purple);
+        }
+
+        .contact-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 100px;
+        }
+
+        .contact-info h2 {
+            font-size: clamp(40px, 5vw, 60px);
+            font-weight: 400;
+            margin-bottom: 40px;
+            line-height: 1.2;
+        }
+
+        .contact-details {
+            margin: 60px 0;
+        }
+
+        .contact-item {
+            margin-bottom: 30px;
+        }
+
+        .contact-label {
+            font-size: 14px;
+            color: var(--gold);
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .contact-value {
+            font-size: clamp(20px, 2.5vw, 28px);
+            color: var(--ivory);
+            font-weight: 300;
+        }
+
+        .contact-form {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 60px;
+            border-radius: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 30px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            color: var(--gold);
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 15px 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(197, 160, 89, 0.3);
+            border-radius: 10px;
+            color: var(--ivory);
+            font-size: 18px;
+            font-family: 'Cormorant Garamond', serif;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--gold);
+            background: rgba(197, 160, 89, 0.05);
+        }
+
+        textarea.form-control {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .submit-btn {
+            padding: 20px 50px;
+            background: var(--gold);
+            color: var(--deep-blue);
+            font-size: 18px;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 700;
+        }
+
+        .submit-btn:hover {
+            background: var(--gold-light);
+            box-shadow: 0 10px 30px rgba(197, 160, 89, 0.3);
+            transform: translateY(-2px);
+        }
+
+        /* Footer */
+        footer {
+            padding: 80px 0 40px;
+            background: var(--deep-blue);
+            border-top: 1px solid rgba(197, 160, 89, 0.1);
+        }
+
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 60px;
+        }
+
+        .footer-logo {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--gold);
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+        }
+
+        .footer-logo span {
+            font-size: 12px;
+            display: block;
+            font-size: 10px;
+            font-family: 'Inter', sans-serif;
+            letter-spacing: 0.1em;
+            color: var(--gold-light);
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 40px;
+        }
+
+        .footer-links a {
+            color: var(--ivory);
+            text-decoration: none;
+            font-size: 14px;
+            letter-spacing: 0.15em;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: var(--gold);
+        }
+
+        .footer-copyright {
+            text-align: center;
+            color: rgba(245, 240, 230, 0.4);
+            font-size: 14px;
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateX(-50%) translateY(0);
+            }
+            40% {
+                transform: translateX(-50%) translateY(-15px);
+            }
+            60% {
+                transform: translateX(-50%) translateY(-8px);
+            }
+        }
+
+        @keyframes rotateGlass {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .story-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .portfolio-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .contact-container {
+                grid-template-columns: 1fr;
+            }
+
+            .process-steps {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .menu-toggle {
+                display: block;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .process-steps {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-content {
+                flex-direction: column;
+                gap: 30px;
+                text-align: center;
+            }
+
+            .hero h1 {
+                font-size: clamp(50px, 10vw, 100px);
+            }
+
+            .story-text h2 {
+                font-size: 40px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 3D Canvas Background -->
+    <canvas id="art-canvas"></canvas>
+
+    <!-- Navigation -->
+    <nav id="nav">
+        <div class="container nav-content">
+            <a href="#" class="logo">
+                Lumière Atelier<span>Est. 1924 • Lyon</span>
+            </a>
+            <div class="nav-links">
+                <a href="#story">Studio</a>
+                <a href="#process">Process</a>
+                <a href="#portfolio">Portfolio</a>
+                <a href="#contact">Contact</a>
+            </div>
+            <div class="menu-toggle">
+                <div class="menu-icon"></div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1 class="cursive">Light<span>Transformed</span> into Glass</h1>
+            <p class="sans">Bespoke museum-quality stained glass installations for architectural spaces of enduring beauty and meaning</p>
+        </div>
+        <div class="scroll-indicator"></div>
+    </section>
+
+    <!-- Story Section -->
+    <section id="story" class="section story">
+        <div class="container story-grid">
+            <div class="story-text">
+                <h2 class="cursive">Where Century-Old Craft Meets Modern Vision</h2>
+                <p>Founded in Lyon in 1924, Lumière Atelier has spent a century perfecting the art of stained glass. We create architectural installations that don't just adorn spaces—they transform them, infusing light with color, texture, and profound emotional resonance.</p>
+                <p>Our pieces live in the spaces between function and poetry: in cathedral windows that tell stories in light, in corporate lobbies where glass becomes a canvas for corporate identity, in private residences where every pane whispers of luxury and discernment.</p>
+                <p>We work exclusively with master artisans who have spent decades mastering the delicate alchemy of glass, color, and light. Each commission is a collaboration—a dialogue between our clients' visions and our century of expertise.</p>
+            </div>
+            <div class="story-visual">
+                <div class="story-glass"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Process Section -->
+    <section id="process" class="section process">
+        <div class="container">
+            <h2 class="section-title cursive">Our Process</h2>
+            <div class="process-steps">
+                <div class="process-step">
+                    <span class="process-number">01</span>
+                    <div class="process-icon"></div>
+                    <h3 class="cursive">Consultation</h3>
+                    <p>We begin with deep listening—understanding your space, your vision, and the emotional resonance you seek. Every commission starts with a conversation.</p>
+                </div>
+                <div class="process-step">
+                    <span class="process-number">02</span>
+                    <div class="process-icon"></div>
+                    <h3 class="cursive">Design</h3>
+                    <p>Our designers translate your vision into sketches and full-scale cartoons, studying light patterns, color theory, and architectural harmony.</p>
+                </div>
+                <div class="process-step">
+                    <span class="process-number">03</span>
+                    <div class="process-icon"></div>
+                    <h3 class="cursive">Creation</h3>
+                    <p>Master artisans hand-cut each piece of glass, selecting from our archive of 5,000+ colors and textures, then assemble with copper foil or lead.</p>
+                </div>
+                <div class="process-step">
+                    <span class="process-number">04</span>
+                    <div class="process-icon"></div>
+                    <h3 class="cursive">Installation</h3>
+                    <p>We handle every detail of installation, ensuring your piece arrives at its permanent home with the care and precision it deserves.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Portfolio Section -->
+    <section id="portfolio" class="section portfolio">
+        <div class="container">
+            <h2 class="section-title cursive">Selected Works</h2>
+            <div class="portfolio-grid">
+                <!-- Portfolio Item 1 -->
+                <div class="portfolio-item">
+                    <div class="portfolio-content">
+                        <h3 class="cursive">Château de la Closelle</h3>
+                        <p class="sans">Grand Salon, French Renaissance Manor</p>
+                    </div>
+                    <div class="portfolio-glass" style="background: radial-gradient(circle at 30% 30%, rgba(197, 160, 89, 0.3) 0%, rgba(158, 122, 59, 0.2) 20%, rgba(30, 58, 95, 0.3) 40%, rgba(74, 59, 92, 0.2) 60%, rgba(139, 69, 91, 0.3) 80%, rgba(197, 160, 89, 0.2) 100%);"></div>
+                </div>
+                <!-- Portfolio Item 2 -->
+                <div class="portfolio-item">
+                    <div class="portfolio-content">
+                        <h3 class="cursive">Musée des Confluences</h3>
+                        <p class="sans">Grand Atrium, Architectural Installation</p>
+                    </div>
+                    <div class="portfolio-glass" style="background: radial-gradient(circle at 70% 40%, rgba(139, 69, 91, 0.3) 0%, rgba(197, 160, 89, 0.2) 30%, rgba(30, 58, 95, 0.4) 60%, rgba(74, 59, 92, 0.2) 80%, rgba(197, 160, 89, 0.3) 100%);"></div>
+                </div>
+                <!-- Portfolio Item 3 -->
+                <div class="portfolio-item">
+                    <div class="portfolio-content">
+                        <h3 class="cursive">L'Hôtel Particulier</h3>
+                        <p class="sans">Staircase Hall, Private Residence</p>
+                    </div>
+                    <div class="portfolio-glass" style="background: radial-gradient(circle at 50% 60%, rgba(74, 59, 92, 0.3) 0%, rgba(197, 160, 89, 0.4) 30%, rgba(139, 69, 91, 0.2) 50%, rgba(30, 58, 95, 0.3) 80%, rgba(197, 160, 89, 0.2) 100%);"></div>
+                </div>
+                <!-- Portfolio Item 4 -->
+                <div class="portfolio-item">
+                    <div class="portfolio-content">
+                        <h3 class="cursive">Cathédrale Saint-Jean</h3>
+                        <p class="sans">North Transept, Restoration Project</p>
+                    </div>
+                    <div class="portfolio-glass" style="background: radial-gradient(circle at 40% 50%, rgba(197, 160, 89, 0.4) 0%, rgba(139, 69, 91, 0.2) 25%, rgba(30, 58, 95, 0.3) 50%, rgba(74, 59, 92, 0.3) 75%, rgba(197, 160, 89, 0.3) 100%);"></div>
+                </div>
+                <!-- Portfolio Item 5 -->
+                <div class="portfolio-item">
+                    <div class="portfolio-content">
+                        <h3 class="cursive">La Maison des Lumières</h3>
+                        <p class="sans">Ceiling Installation, Contemporary Home</p>
+                    </div>
+                    <div class="portfolio-glass" style="background: radial-gradient(circle at 60% 30%, rgba(30, 58, 95, 0.3) 0%, rgba(197, 160, 89, 0.3) 25%, rgba(74, 59, 92, 0.3) 50%, rgba(139, 69, 91, 0.2) 75%, rgba(197, 160, 89, 0.2) 100%);"></div>
+                </div>
+                <!-- Portfolio Item 6 -->
+                <div class="portfolio-item">
+                    <div class="portfolio-content">
+                        <h3 class="cursive">Basilique Notre-Dame</h3>
+                        <p class="sans">Chapel of the Passion</p>
+                    </div>
+                    <div class="portfolio-glass" style="background: radial-gradient(circle at 30% 70%, rgba(139, 69, 91, 0.3) 0%, rgba(74, 59, 92, 0.2) 30%, rgba(197, 160, 89, 0.3) 60%, rgba(30, 58, 95, 0.4) 80%, rgba(197, 160, 89, 0.2) 100%);"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="section contact">
+        <div class="container contact-container">
+            <div class="contact-info">
+                <h2 class="cursive">Begin Your Commission</h2>
+                <p class="sans">At Lumière Atelier, we create fewer than twenty pieces annually, ensuring each receives the time and attention it deserves. We invite you to begin a conversation about bringing light into your space.</p>
+                
+                <div class="contact-details">
+                    <div class="contact-item">
+                        <span class="contact-label">Atelier</span>
+                        <span class="contact-value">12 Rue de la République, 69001 Lyon, France</span>
+                    </div>
+                    <div class="contact-item">
+                        <span class="contact-label">Email</span>
+                        <span class="contact-value">commission@lumiere-atelier.com</span>
+                    </div>
+                    <div class="contact-item">
+                        <span class="contact-label">Phone</span>
+                        <span class="contact-value">+33 4 72 12 34 56</span>
+                    </div>
+                    <div class="contact-item">
+                        <span class="contact-label">Opening Hours</span>
+                        <span class="contact-value">Monday–Saturday, 10:00–19:00</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="contact-form">
+                <form>
+                    <div class="form-group">
+                        <label>Name</label>
+                        <input type="text" class="form-control" placeholder="Your name">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" class="form-control" placeholder="Your email">
+                    </div>
+                    <div class="form-group">
+                        <label>Project Type</label>
+                        <input type="text" class="form-control" placeholder="Cathedral • Residential • Commercial">
+                    </div>
+                    <div class="form-group">
+                        <label>Message</label>
+                        <textarea class="form-control" placeholder="Tell us about your vision..."></textarea>
+                    </div>
+                    <button type="submit" class="submit-btn">Request Consultation</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <a href="#" class="footer-logo">
+                    Lumière Atelier<span>Est. 1924 • Lyon</span>
+                </a>
+                <div class="footer-links">
+                    <a href="#story">Studio</a>
+                    <a href="#process">Process</a>
+                    <a href="#portfolio">Portfolio</a>
+                    <a href="#contact">Contact</a>
+                </div>
+            </div>
+            <p class="footer-copyright">© 2024 Lumière Atelier. All rights reserved. Crafted in Lyon, France.</p>
+        </div>
+    </footer>
+
+    <!-- Three.js Implementation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        class LumiereCanvas {
+            constructor() {
+                this.canvas = document.getElementById('art-canvas');
+                this.scene = new THREE.Scene();
+                this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.renderer = new THREE.WebGLRenderer({
+                    canvas: this.canvas,
+                    antialias: true,
+                    alpha: true
+                });
+                this.raycaster = new THREE.Raycaster();
+                this.mouse = new THREE.Vector2();
+                this.glassPanels = [];
+                this.time = 0;
+                
+                this.init();
+            }
+
+            init() {
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                
+                this.camera.position.z = 15;
+                this.camera.position.y = 2;
+                this.camera.lookAt(0, 0, 0);
+
+                this.createGlassPanels();
+                this.createAmbientLight();
+                this.createFlexibleLight();
+                this.createParticles();
+                
+                this.addEventListeners();
+                this.animate();
+            }
+
+            createGlassPanels() {
+                const panelCount = 25;
+                
+                for (let i = 0; i < panelCount; i++) {
+                    const size = Math.random() * 8 + 3;
+                    const geometry = new THREE.PlaneGeometry(size, size * 0.6);
+                    
+                    // Create glass-like material with multiple layers
+                    const material = new THREE.ShaderMaterial({
+                        uniforms: {
+                            time: { value: 0 },
+                            color1: { value: new THREE.Color(this.getRandomColor()) },
+                            color2: { value: new THREE.Color(this.getRandomColor()) },
+                            color3: { value: new THREE.Color(this.getRandomColor()) },
+                            opacity: { value: Math.random() * 0.3 + 0.1 }
+                        },
+                        vertexShader: `
+                            varying vec2 vUv;
+                            void main() {
+                                vUv = uv;
+                                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                            }
+                        `,
+                        fragmentShader: `
+                            uniform float time;
+                            uniform vec3 color1;
+                            uniform vec3 color2;
+                            uniform vec3 color3;
+                            uniform float opacity;
+                            varying vec2 vUv;
+                            
+                            float random(vec2 st) {
+                                return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
+                            }
+                            
+                            void main() {
+                                vec2 uv = vUv;
+                                
+                                // Create stained glass patterns
+                                float pattern = 0.0;
+                                pattern += sin(uv.x * 10.0 + time * 0.5) * cos(uv.y * 10.0 + time * 0.3) * 0.5;
+                                pattern += sin(uv.x * 20.0 - time * 0.3) * cos(uv.y * 20.0 - time * 0.5) * 0.3;
+                                pattern += random(uv * 10.0) * 0.2;
+                                pattern = clamp(pattern + 0.5, 0.0, 1.0);
+                                
+                                // Mix colors based on pattern
+                                vec3 color = mix(color1, color2, pattern);
+                                color = mix(color, color3, uv.y * 0.5 + 0.25);
+                                
+                                // Add subtle gradient
+                                color *= (uv.y * 0.7 + 0.3);
+                                
+                                gl_FragColor = vec4(color, opacity);
+                            }
+                        `,
+                        transparent: true,
+                        side: THREE.DoubleSide,
+                        depthWrite: false
+                    });
+
+                    const panel = new THREE.Mesh(geometry, material);
+                    
+                    // Position panels in 3D space
+                    panel.position.x = (Math.random() - 0.5) * 25;
+                    panel.position.y = (Math.random() - 0.5) * 10;
+                    panel.position.z = (Math.random() - 0.5) * 10 - 5;
+                    
+                    // Random rotation
+                    panel.rotation.x = (Math.random() - 0.5) * 0.3;
+                    panel.rotation.y = (Math.random() - 0.5) * 0.5;
+                    
+                    this.scene.add(panel);
+                    this.glassPanels.push(panel);
+                }
+            }
+
+            getRandomColor() {
+                const colors = [
+                    [0.77, 0.63, 0.35], // Gold
+                    [0.12, 0.19, 0.29], // Deep Blue
+                    [0.29, 0.44, 0.69], // Sapphire
+                    [0.29, 0.44, 0.69], // Amethyst
+                    [0.54, 0.43, 0.55], // Amethyst 2
+                    [0.55, 0.27, 0.36], // Rose
+                    [0.92, 0.84, 0.48], // Gold Light
+                ];
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                return `rgb(${Math.floor(color[0] * 255)}, ${Math.floor(color[1] * 255)}, ${Math.floor(color[2] * 255)})`;
+            }
+
+            createAmbientLight() {
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+                this.scene.add(ambientLight);
+
+                const pointLight1 = new THREE.PointLight(0xc5a059, 1, 100);
+                pointLight1.position.set(5, 5, 10);
+                this.scene.add(pointLight1);
+
+                const pointLight2 = new THREE.PointLight(0x1e3a5f, 0.8, 100);
+                pointLight2.position.set(-5, -5, 8);
+                this.scene.add(pointLight2);
+
+                const pointLight3 = new THREE.PointLight(0x8b455b, 0.6, 100);
+                pointLight3.position.set(0, 8, -5);
+                this.scene.add(pointLight3);
+            }
+
+            createFlexibleLight() {
+                const flexibleLight = new THREE.DirectionalLight(0xffffff, 0.5);
+                flexibleLight.position.set(0, 10, 5);
+                this.scene.add(flexibleLight);
+            }
+
+            createParticles() {
+                const particlesGeometry = new THREE.BufferGeometry();
+                const particlesCount = 300;
+                
+                const posArray = new Float32Array(particlesCount * 3);
+                
+                for (let i = 0; i < particlesCount * 3; i++) {
+                    posArray[i] = (Math.random() - 0.5) * 40;
+                }
+                
+                particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+                
+                const particlesMaterial = new THREE.PointsMaterial({
+                    size: 0.15,
+                    color: 0xc5a059,
+                    transparent: true,
+                    opacity: 0.8,
+                    blending: THREE.AdditiveBlending
+                });
+                
+                this.particles = new THREE.Points(particlesGeometry, particlesMaterial);
+                this.scene.add(this.particles);
+            }
+
+            addEventListeners() {
+                window.addEventListener('resize', () => {
+                    this.camera.aspect = window.innerWidth / window.innerHeight;
+                    this.camera.updateProjectionMatrix();
+                    this.renderer.setSize(window.innerWidth, window.innerHeight);
+                });
+
+                window.addEventListener('mousemove', (event) => {
+                    this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                    this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+                });
+            }
+
+            animate() {
+                this.time += 0.01;
+                
+                // Rotate glass panels slowly
+                this.glassPanels.forEach((panel, index) => {
+                    panel.rotation.y += 0.001 * (index % 2 === 0 ? 1 : -1);
+                    panel.rotation.x += 0.0005;
+                    
+                    // Update shader time
+                    if (panel.material.uniforms.time) {
+                        panel.material.uniforms.time.value = this.time;
+                    }
+                });
+
+                // Move particles slowly
+                this.particles.rotation.y = this.time * 0.02;
+                this.particles.rotation.x = this.time * 0.01;
+
+                // Camera parallax effect
+                this.camera.position.x += (this.mouse.x * 5 - this.camera.position.x) * 0.05;
+                this.camera.position.y += (this.mouse.y * 2 + 2 - this.camera.position.y) * 0.05;
+                this.camera.lookAt(0, 0, 0);
+
+                this.renderer.render(this.scene, this.camera);
+                requestAnimationFrame(() => this.animate());
+            }
+        }
+
+        // Initialize on load
+        window.addEventListener('load', () => {
+            new LumiereCanvas();
+            
+            // Navigation scroll effect
+            const nav = document.getElementById('nav');
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 50) {
+                    nav.classList.add('scrolled');
+                } else {
+                    nav.classList.remove('scrolled');
+                }
+            });
+            
+            // Mobile menu toggle
+            const menuToggle = document.querySelector('.menu-toggle');
+            const navLinks = document.querySelector('.nav-links');
+            
+            if (menuToggle) {
+                menuToggle.addEventListener('click', () => {
+                    navLinks.style.display = navLinks.style.display === 'flex' ? 'none' : 'flex';
+                    navLinks.style.flexDirection = 'column';
+                    navLinks.style.position = 'absolute';
+                    navLinks.style.top = '100px';
+                    navLinks.style.right = '0';
+                    navLinks.style.background = '#0a0f14';
+                    navLinks.style.width = '200px';
+                    navLinks.style.padding = '20px';
+                    navLinks.style.textAlign = 'center';
+                });
+            }
+        });
+    </script>
+</body>
+</html>

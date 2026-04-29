@@ -1,0 +1,473 @@
+<!--
+54377 tokens
+As always, i have to guess if these models are finished or they simply choked. It literally stopped as soon as it closed the html block. 
+The design is minimalistic, there's literally nothing but text and a black background on the website. The descriptions are succint and not enough. 
+The first rendition was the most appalling result so far. I followed up with a second prompt saying that this design was mediocre at best and not even remotely close to the benchmark. 
+It went back to work and added a background, my boots almost fell off - no they didn't. It's not even close to exquisite or special. One nice thing that i noticed later was that when you hovered over the works, the whole background would change. This is a nice addition. 
+552.3 t/s 47.2 t/s
+463 lines of code
+
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumière Atelier | The Architecture of Refracted Silence</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,700;1,6..96,400&family=Inter:wght@100;300;400&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+    <style>
+        :root {
+            --black: #020202;
+            --gold: #d4af37;
+            --white: #ffffff;
+            --font-serif: 'Bodoni Moda', serif;
+            --font-sans: 'Inter', sans-serif;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; cursor: none; }
+        body {
+            background-color: var(--black);
+            color: var(--white);
+            font-family: var(--font-sans);
+            overflow-x: hidden;
+            line-height: 1.4;
+        }
+        /* Custom Cursor */
+        #cursor {
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            background: var(--white);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            mix-blend-mode: difference;
+            transition: transform 0.1s ease-out;
+        }
+        canvas#webgl {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            filter: contrast(1.1) brightness(0.9);
+        }
+        /* Layout */
+        section {
+            position: relative;
+            min-height: 100vh;
+            width: 100%;
+            padding: 10vw;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            z-index: 1;
+        }
+        .container { width: 100%; max-width: 1400px; margin: 0 auto; }
+        /* Typography */
+        h1, h2, h3 {
+            font-family: var(--font-serif);
+            font-weight: 400;
+            line-height: 0.85;
+            text-transform: none;
+        }
+        .hero-title { font-size: clamp(4rem, 15vw, 12rem); margin-bottom: 2rem; }
+        .section-title { font-size: clamp(3rem, 8vw, 6rem); margin-bottom: 4rem; }
+        .sub-label { 
+            font-family: var(--font-sans);
+            text-transform: uppercase; 
+            letter-spacing: 0.5em; 
+            font-size: 0.7rem; 
+            color: var(--gold);
+            margin-bottom: 2rem;
+            display: block;
+        }
+        p { 
+            font-size: clamp(1rem, 2vw, 1.4rem); 
+            font-weight: 300; 
+            max-width: 50ch; 
+            color: rgba(255,255,255,0.7);
+            margin-bottom: 2rem;
+        }
+        /* Portfolio Grid - Non-Standard */
+        .portfolio-wrap {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 2rem;
+        }
+        .work-item {
+            grid-column: span 6;
+            padding: 4rem 0;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .work-item:nth-child(even) { grid-column: 7 / span 6; }
+        .work-item:nth-child(odd) { grid-column: 1 / span 6; }
+        .work-item:hover { padding-left: 2rem; border-top-color: var(--gold); }
+        .work-item h3 { font-size: 3rem; margin-bottom: 1rem; }
+        .work-item span { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.2em; color: var(--gold); }
+        /* Process - Vertical Timeline */
+        .process-item { margin-bottom: 10rem; }
+        .process-num { font-family: var(--font-serif); font-size: 8rem; opacity: 0.1; position: absolute; left: -4rem; top: -4rem; }
+        /* Contact Form */
+        .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10vw; }
+        input, textarea {
+            width: 100%;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            color: var(--white);
+            font-family: var(--font-serif);
+            font-size: 2rem;
+            padding: 1rem 0;
+            margin-bottom: 3rem;
+            outline: none;
+        }
+        input:focus, textarea:focus { border-bottom-color: var(--gold); }
+        button {
+            background: transparent;
+            border: 1px solid var(--white);
+            color: var(--white);
+            padding: 1.5rem 4rem;
+            font-family: var(--font-sans);
+            text-transform: uppercase;
+            letter-spacing: 0.3em;
+            font-size: 0.7rem;
+            transition: 0.4s;
+        }
+        button:hover { background: var(--white); color: var(--black); }
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0; width: 100%;
+            padding: 2rem 5vw;
+            display: flex; justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+        }
+        .nav-logo { font-family: var(--font-serif); font-size: 1.5rem; font-style: italic; text-decoration: none; color: var(--white); }
+        .nav-links { display: flex; gap: 4rem; }
+        .nav-links a { text-decoration: none; color: var(--white); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.2em; opacity: 0.5; transition: 0.3s; }
+        .nav-links a:hover { opacity: 1; }
+        @media (max-width: 900px) {
+            .work-item, .work-item:nth-child(even) { grid-column: 1 / span 12; }
+            .contact-grid { grid-template-columns: 1fr; }
+            .nav-links { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div id="cursor"></div>
+    <nav>
+        <a href="#" class="nav-logo">L.A.</a>
+        <div class="nav-links">
+            <a href="#story">Provenance</a>
+            <a href="#portfolio">Manifestations</a>
+            <a href="#process">The Ritual</a>
+            <a href="#contact">Inquiry</a>
+        </div>
+    </nav>
+    <canvas id="webgl"></canvas>
+    <main>
+        <section id="hero">
+            <div class="container">
+                <span class="sub-label">Lyon, France</span>
+                <h1 class="hero-title">The Art of<br>Refracted Silence.</h1>
+                <p>We do not manufacture glass. We curate the movement of the sun through hand-sculpted mineral light.</p>
+            </div>
+        </section>
+        <section id="story">
+            <div class="container">
+                <span class="sub-label">Provenance</span>
+                <h2 class="section-title">The Alchemy<br>of Light.</h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 4rem;">
+                    <p>Born from the interplay of medieval glass-blowing traditions and contemporary architectural mathematics, Lumière Atelier treats light as a structural material.</p>
+                    <p>Every installation is a singular event—a precise manipulation of spectrum, shadow, and space designed to exist only in its specific geography.</p>
+                </div>
+            </div>
+        </section>
+        <section id="portfolio">
+            <div class="container">
+                <span class="sub-label">Manifestations</span>
+                <h2 class="section-title">Selected<br>Commissions.</h2>
+                <div class="portfolio-wrap" id="portfolio-list">
+                    <!-- JS Injection -->
+                </div>
+            </div>
+        </section>
+        <section id="process">
+            <div class="container">
+                <span class="sub-label">The Ritual</span>
+                <h2 class="section-title">The Path<br>to Permanence.</h2>
+                <div class="process-item">
+                    <span class="process-num">01</span>
+                    <h3>The Spectral Audit</h3>
+                    <p>A mathematical study of solar trajectories and light behavior within your chosen site.</p>
+                </div>
+                <div class="process-item">
+                    <span class="process-num">02</span>
+                    <h3>The Forge</h3>
+                    <p>Hand-blowing and mineral-infusing glass to create unique refractive indices.</p>
+                </div>
+                <div class="process-item">
+                    <span class="process-num">03</span>
+                    <h3>The Installation</h3>
+                    <p>Architectural integration where light becomes the primary inhabitant of the space.</p>
+                </div>
+            </div>
+        </section>
+        <section id="contact">
+            <div class="container">
+                <div class="contact-grid">
+                    <div>
+                        <span class="sub-label">Inquiry</span>
+                        <h2 class="section-title">Begin the<br>Dialogue.</h2>
+                        <p>For commissions, architectural consultations, or private viewing requests.</p>
+                    </div>
+                    <form id="contact-form">
+                        <input type="text" placeholder="Name" required>
+                        <input type="email" placeholder="Email" required>
+                        <textarea placeholder="The Vision..." rows="3" required></textarea>
+                        <button type="submit">Submit Request</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </main>
+    <!-- SHADERS -->
+    <script id="vertexShader" type="x-shader/x-vertex">
+        varying vec2 vUv;
+        varying vec3 vNormal;
+        varying vec3 vViewPosition;
+        varying vec3 vWorldPosition;
+        void main() {
+            vUv = uv;
+            vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+            vWorldPosition = worldPosition.xyz;
+            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+            vNormal = normalize(normalMatrix * normal);
+            vViewPosition = -mvPosition.xyz;
+            gl_Position = projectionMatrix * mvPosition;
+        }
+    </script>
+    <script id="fragmentShader" type="x-shader/fragment">
+        uniform float uTime;
+        uniform vec2 uMouse;
+        uniform vec3 uColorA;
+        uniform vec3 uColorB;
+        uniform float uScroll;
+        varying vec2 vUv;
+        varying vec3 vNormal;
+        varying vec3 vViewPosition;
+        varying vec3 vWorldPosition;
+        // Simplex Noise for Organic Imperfections
+        vec3 permute(vec3 x) { return mod(((x*34.0)+1.0)*x, 289.0); }
+        float snoise(vec2 v){
+          const vec4 C = vec4(0.211324865405187, 0.366025403784439,
+                   -0.577350269189626, 0.024390243902439);
+          vec2 i  = floor(v + dot(v, C.yy) );
+          vec2 x0 = v -   i + dot(i, C.xx);
+          vec2 i1;
+          i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+          vec4 x12 = x0.xyxy + C.xxzz;
+          x12.xy -= i1;
+          i = mod(i, 289.0);
+          vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0 ))
+          + i.x + vec3(0.0, i1.x, 1.0 ));
+          vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+          m = m*m ;
+            m = m*m ;
+          vec3 x = 2.0 * fract(p * C.www) - 1.0;
+          vec3 h = abs(x) - 0.5;
+          vec3 ox = floor(x + 0.5);
+          vec3 a0 = x - ox;
+          m *= 1.79284291400159 - 0.85373472095314 * ( a0*a0 + h*h );
+          vec3 g;
+          g.x  = a0.x  * x0.x  + h.x  * x0.y;
+          g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+          return 130.0 * dot(m, g);
+        }
+        // Voronoi for Glass Cells
+        vec2 hash22(vec2 p) {
+            p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)));
+            return fract(sin(p) * 43758.5453);
+        }
+        float voronoi(vec2 x) {
+            vec2 n = floor(x);
+            vec2 f = fract(x);
+            float m = 8.0;
+            for(int j=-1; j<=1; j++) {
+                for(int i=-1; i<=1; i++) {
+                    vec2 g = vec2(float(i), float(j));
+                    vec2 o = hash22(n + g);
+                    vec2 r = g + o - f;
+                    float d = dot(r, r);
+                    if(d < m) m = d;
+                }
+            }
+            return sqrt(m);
+        }
+        void main() {
+            // Distort UVs with noise to simulate hand-blown glass bubbles/imperfections
+            vec2 distortedUv = vUv + vec2(snoise(vUv * 3.0 + uTime * 0.1), snoise(vUv * 2.5 - uTime * 0.05)) * 0.05;
+            
+            // Voronoi Cell structure
+            float v = voronoi(distortedUv * 3.5 + uScroll * 0.2);
+            
+            // Lead line logic (dark edges)
+            float edge = smoothstep(0.0, 0.15, v);
+            
+            // Caustics simulation (light concentrating in certain spots)
+            float caustics = pow(abs(snoise(distortedUv * 5.0 + uTime * 0.2)), 3.0) * 0.5;
+            
+            // Interaction-based light shift
+            float mouseDist = distance(vUv, uMouse);
+            float lightPulse = smoothstep(0.6, 0.0, mouseDist) * 0.4;
+            // Color blending
+            vec3 baseColor = mix(uColorA, uColorB, v);
+            
+            // Chromatic aberration simulation (RGB split based on Voronoi)
+            float r = mix(uColorA.r, uColorB.r, v + 0.01);
+            float g = mix(uColorA.g, uColorB.g, v);
+            float b = mix(uColorA.b, uColorB.b, v - 0.01);
+            vec3 color = vec3(r, g, b);
+            // Final lighting composition
+            vec3 finalColor = color * edge;
+            finalColor += caustics * uColorA * 0.5;
+            finalColor += lightPulse * uColorB;
+            
+            // Add specular highlights
+            vec3 normal = normalize(vNormal);
+            vec3 viewDir = normalize(vViewPosition);
+            float spec = pow(max(dot(reflect(-viewDir, normal), vec3(0.0, 1.0, 0.0)), 0.0), 64.0);
+            finalColor += spec * 0.3;
+            gl_FragColor = vec4(finalColor, 1.0);
+        }
+    </script>
+    <script>
+        /**
+         * DATA
+         */
+        const works = [
+            { title: "Solaris I", sub: "Cathedral Series", colorA: "#2a1a0a", colorB: "#d4af37" },
+            { title: "Nocturne", sub: "Obsidian Collection", colorA: "#050505", colorB: "#1a2a6c" },
+            { title: "Ether", sub: "The Fluidity Series", colorA: "#e0f7fa", colorB: "#80deea" },
+            { title: "Magma", sub: "Volcanic Glass", colorA: "#3e0a0a", colorB: "#ff4500" },
+            { title: "Veridian", sub: "Botanical Study", colorA: "#0d2e1a", colorB: "#90ee90" },
+            { title: "L'Or", sub: "Gilded Geometry", colorA: "#5c4033", colorB: "#ffd700" }
+        ];
+        /**
+         * ENGINE
+         */
+        class Engine {
+            constructor() {
+                this.canvas = document.querySelector('#webgl');
+                this.scene = new THREE.Scene();
+                this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.mouse = new THREE.Vector2(0.5, 0.5);
+                this.targetMouse = new THREE.Vector2(0.5, 0.5);
+                this.scroll = 0;
+                this.targetScroll = 0;
+                this.time = 0;
+                this.init();
+            }
+            init() {
+                const geometry = new THREE.PlaneGeometry(10, 10);
+                this.material = new THREE.ShaderMaterial({
+                    vertexShader: document.getElementById('vertexShader').textContent,
+                    fragmentShader: document.getElementById('fragmentShader').textContent,
+                    uniforms: {
+                        uTime: { value: 0 },
+                        uMouse: { value: new THREE.Vector2(0.5, 0.5) },
+                        uColorA: { value: new THREE.Color("#020202") },
+                        uColorB: { value: new THREE.Color("#1a1a1a") },
+                        uScroll: { value: 0 }
+                    }
+                });
+                this.mesh = new THREE.Mesh(geometry, this.material);
+                this.mesh.position.z = -2;
+                this.scene.add(this.mesh);
+                this.camera.position.z = 3;
+                window.addEventListener('resize', () => this.onResize());
+                window.addEventListener('mousemove', (e) => this.onMouseMove(e));
+                window.addEventListener('scroll', () => this.onScroll());
+                this.animate();
+            }
+            onResize() {
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+            onMouseMove(e) {
+                this.targetMouse.x = e.clientX / window.innerWidth;
+                this.targetMouse.y = 1.0 - (e.clientY / window.innerHeight);
+            }
+            onScroll() {
+                this.targetScroll = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+            }
+            updateColors(c1, c2) {
+                this.material.uniforms.uColorA.value.lerp(new THREE.Color(c1), 0.05);
+                this.material.uniforms.uColorB.value.lerp(new THREE.Color(c2), 0.05);
+            }
+            animate() {
+                this.time += 0.01;
+                this.material.uniforms.uTime.value = this.time;
+                
+                // Smooth Lerping
+                this.mouse.x += (this.targetMouse.x - this.mouse.x) * 0.05;
+                this.mouse.y += (this.targetMouse.y - this.mouse.y) * 0.05;
+                this.material.uniforms.uMouse.value.copy(this.mouse);
+                this.scroll += (this.targetScroll - this.scroll) * 0.05;
+                this.material.uniforms.uScroll.value = this.scroll;
+                this.renderer.render(this.scene, this.camera);
+                requestAnimationFrame(() => this.animate());
+            }
+        }
+        /**
+         * UI ORCHESTRATION
+         */
+        const engine = new Engine();
+        // Populate Portfolio
+        const list = document.getElementById('portfolio-list');
+        works.forEach(work => {
+            const el = document.createElement('div');
+            el.className = 'work-item';
+            el.innerHTML = `<span>${work.sub}</span><h3>${work.title}</h3>`;
+            el.addEventListener('mouseenter', () => {
+                engine.updateColors(work.colorA, work.colorB);
+            });
+            list.appendChild(el);
+        });
+        // Custom Cursor Logic
+        const cursor = document.getElementById('cursor');
+        window.addEventListener('mousemove', (e) => {
+            cursor.style.left = e.clientX + 'px';
+            cursor.style.top = e.clientY + 'px';
+        });
+        // Intersection Observer for reveal animations
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if(entry.isIntersecting) {
+                    entry.target.style.opacity = 1;
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, { threshold: 0.1 });
+        document.querySelectorAll('section').forEach(s => {
+            s.style.opacity = 0;
+            s.style.transform = 'translateY(50px)';
+            s.style.transition = 'all 1.5s cubic-bezier(0.22, 1, 0.36, 1)';
+            observer.observe(s);
+        });
+        // Form Handle
+        document.getElementById('contact-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            alert("Your inquiry has been received. We shall respond in due course.");
+            e.target.reset();
+        });
+    </script>
+</body>
+</html>

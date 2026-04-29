@@ -1,0 +1,513 @@
+<!--
+Gemma4 31b dense unsloth
+57521 tokens
+Another short and not necessarily sweet result from gemma. 
+The 6 works that should be showcased were not showcased in the first iteration of the website. 
+The fonts used are not very worthy of an atelier of this calibre, more suited for a treasure hunt website. 
+The SVG it used doesn't exist. 
+
+I tried to prompt it a second time saying: you created a website @index.html . noise.svg is 404 and the works/portolio area is not displayed. 
+It supposedly fixed it by using the same non-existing SVG. It's a very underwhelming result. 
+142.9 t/s prompt processing  / generation 8.8 t/s
+500 lines
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumière Atelier | Bespoke Stained Glass Lyon</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@300;400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0c;
+            --gold: #c5a059;
+            --gold-muted: #8e7341;
+            --glass-blue: rgba(100, 150, 255, 0.2);
+            --glass-ruby: rgba(255, 50, 50, 0.2);
+            --glass-emerald: rgba(50, 200, 100, 0.2);
+            --text-main: #e0e0e0;
+            --text-dim: #a0a0a0;
+            --transition: all 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: var(--bg); 
+            color: var(--text-main); 
+            font-family: 'Montserrat', sans-serif; 
+            overflow-x: hidden; 
+            line-height: 1.6;
+            cursor: none;
+        }
+
+        h1, h2, h3 { font-family: 'Cinzel Decorative', serif; color: var(--gold); text-transform: uppercase; letter-spacing: 0.1em; }
+        p { font-family: 'Playfair Display', serif; font-size: 1.1rem; }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: -1;
+            pointer-events: none;
+            filter: contrast(1.1) brightness(0.8);
+        }
+
+        .custom-cursor {
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            border: 1px solid var(--gold);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            transition: transform 0.1s ease;
+            mix-blend-mode: difference;
+        }
+
+        .custom-cursor-dot {
+            position: fixed;
+            width: 4px;
+            height: 4px;
+            background: var(--gold);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            padding: 2rem 4rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            mix-blend-mode: difference;
+        }
+        .logo { font-family: 'Cinzel Decorative', serif; font-weight: 900; font-size: 1.5rem; color: var(--gold); text-decoration: none; }
+        .nav-links { display: flex; gap: 3rem; list-style: none; }
+        .nav-links a { 
+            text-decoration: none; 
+            color: var(--text-main); 
+            font-size: 0.8rem; 
+            text-transform: uppercase; 
+            letter-spacing: 0.2em; 
+            transition: var(--transition);
+            position: relative;
+        }
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 1px;
+            background: var(--gold);
+            transition: var(--transition);
+        }
+        .nav-links a:hover::after { width: 100%; }
+
+        section {
+            min-height: 100vh;
+            padding: 10vh 10vw;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+        }
+
+        .hero {
+            text-align: center;
+            align-items: center;
+        }
+        .hero h1 {
+            font-size: clamp(3rem, 8vw, 7rem);
+            line-height: 0.9;
+            margin-bottom: 2rem;
+            opacity: 0;
+            transform: translateY(50px);
+        }
+        .hero p {
+            max-width: 600px;
+            font-style: italic;
+            font-size: 1.4rem;
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        .story {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6rem;
+            align-items: center;
+        }
+        .story-content h2 { font-size: 3rem; margin-bottom: 2rem; }
+        .story-content p { margin-bottom: 1.5rem; color: var(--text-dim); }
+
+        .process {
+            text-align: center;
+        }
+        .process-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4rem;
+            margin-top: 5rem;
+        }
+        .process-step {
+            padding: 3rem 2rem;
+            border: 1px solid rgba(197, 160, 89, 0.2);
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+        .process-step:hover {
+            border-color: var(--gold);
+            background: rgba(197, 160, 89, 0.05);
+            transform: translateY(-10px);
+        }
+        .process-step h3 { margin-bottom: 1rem; font-size: 1.2rem; }
+        .process-step span { 
+            font-family: 'Cinzel Decorative', serif; 
+            font-size: 4rem; 
+            color: rgba(197, 160, 89, 0.1); 
+            position: absolute; 
+            top: -10px; 
+            right: 10px; 
+        }
+
+        .portfolio {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            opacity: 1;
+            visibility: visible;
+        }
+        .work-item {
+            height: 60vh;
+            position: relative;
+            overflow: hidden;
+            background: #111;
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: var(--transition);
+        }
+        .work-item:hover { border-color: var(--gold); }
+        .work-item img { 
+            width: 100%; height: 100%; object-fit: cover; 
+            opacity: 0.4; transition: var(--transition);
+        }
+        .work-item:hover img { opacity: 0.7; transform: scale(1.05); }
+        .work-info {
+            position: absolute;
+            bottom: 2rem;
+            left: 2rem;
+            right: 2rem;
+            pointer-events: none;
+        }
+        .work-info h3 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+        .work-info p { font-size: 0.9rem; color: var(--text-dim); }
+
+        .contact {
+            text-align: center;
+            align-items: center;
+        }
+        .contact h2 { font-size: 4rem; margin-bottom: 3rem; }
+        .contact-link {
+            font-family: 'Cinzel Decorative', serif;
+            font-size: 2rem;
+            color: var(--gold);
+            text-decoration: none;
+            border-bottom: 2px solid var(--gold);
+            padding-bottom: 10px;
+            transition: var(--transition);
+        }
+        .contact-link:hover { color: #fff; border-color: #fff; }
+
+        .noise {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url('https://grainy-gradients.vercel.app/noise.svg');
+            opacity: 0.05;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        @media (max-width: 900px) {
+            .story, .process-grid, .portfolio { grid-template-columns: 1fr; }
+            nav { padding: 1rem 2rem; }
+            .nav-links { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="noise"></div>
+    <div class="custom-cursor"></div>
+    <div class="custom-cursor-dot"></div>
+    <div id="canvas-container"></div>
+
+    <nav>
+        <a href="#" class="logo">Lumière Atelier</a>
+        <ul class="nav-links">
+            <li><a href="#story">The Legacy</a></li>
+            <li><a href="#process">The Rite</a></li>
+            <li><a href="#portfolio">The Works</a></li>
+            <li><a href="#contact">Inquiry</a></li>
+        </ul>
+    </nav>
+
+    <section class="hero">
+        <h1>Architects of<br>Luminous Silence</h1>
+        <p>Bespoke stained glass installations for the world's most exacting spaces. Hand-crafted in Lyon, envisioned for eternity.</p>
+    </section>
+
+    <section id="story" class="story">
+        <div class="story-content">
+            <h2>The Legacy</h2>
+            <p>At Lumière Atelier, we do not merely create windows; we choreograph light. Our practice is a dialogue between the raw volatility of molten glass and the disciplined precision of architectural geometry.</p>
+            <p>Founded in the heart of Lyon, our studio preserves the ancestral secrets of the medieval masters while embracing the mathematical possibilities of the modern age. Every installation is a unique atmospheric intervention, transforming a void into a sanctuary of chromatic depth.</p>
+            <p>We seek the intersection of the divine and the structural, ensuring that every shard of glass is placed with intention, every lead line drawn with purpose.</p>
+        </div>
+        <div class="story-visual">
+            <!-- Three.js handles the visual -->
+        </div>
+    </section>
+
+    <section id="process" class="process">
+        <h2>The Rite of Creation</h2>
+        <div class="process-grid">
+            <div class="process-step">
+                <span>01</span>
+                <h3>The Vision</h3>
+                <p>A profound immersion into the site's architecture, light patterns, and the emotional resonance intended for the space.</p>
+            </div>
+            <div class="process-step">
+                <span>02</span>
+                <h3>The Alchemy</h3>
+                <p>The meticulous selection of minerals and oxides to achieve a palette that breathes with the shifting hours of the day.</p>
+            </div>
+            <div class="process-step">
+                <span>03</span>
+                <h3>The Synthesis</h3>
+                <p>A painstaking assembly where precision engineering meets the intuitive touch of the artisan, culminating in a museum-grade installation.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="portfolio" class="portfolio">
+        <div class="work-item">
+            <div class="work-info">
+                <h3>The Azure Void</h3>
+                <p>A 12-meter celestial ceiling for a private chapel in the Alps.</p>
+            </div>
+        </div>
+        <div class="work-item">
+            <div class="work-info">
+                <h3>Crimson Solstice</h3>
+                <p>A rhythmic series of panels exploring the nature of shadow in a Tokyo gallery.</p>
+            </div>
+        </div>
+        <div class="work-item">
+            <div class="work-info">
+                <h3>Emerald Echoes</h3>
+                <p>An organic, flowing installation integrated into a botanical conservatory.</p>
+            </div>
+        </div>
+        <div class="work-item">
+            <div class="work-info">
+                <h3>The Gilded Prism</h3>
+                <p>Gold-infused glass facets reflecting the opulence of a Parisian salon.</p>
+            </div>
+        </div>
+        <div class="work-item">
+            <div class="work-info">
+                <h3>Obsidian Light</h3>
+                <p>A study in minimalism and transparency for a brutalist library.</p>
+            </div>
+        </div>
+        <div class="work-item">
+            <div class="work-info">
+                <h3>Lumière Eternelle</h3>
+                <p>A complex geometric mandala for a contemporary museum atrium.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="contact" class="contact">
+        <h2>Begin a Dialogue</h2>
+        <a href="mailto:atelier@lumiere.lyon" class="contact-link">atelier@lumiere.lyon</a>
+    </section>
+
+    <script>
+        // --- Cursor Implementation ---
+        const cursor = document.querySelector('.custom-cursor');
+        const dot = document.querySelector('.custom-cursor-dot');
+        
+        window.addEventListener('mousemove', (e) => {
+            gsap.to(cursor, { x: e.clientX - 10, y: e.clientY - 10, duration: 0.3 });
+            gsap.to(dot, { x: e.clientX - 2, y: e.clientY - 2, duration: 0.1 });
+        });
+
+        // --- Three.js Artistic Background ---
+        // Creating a "Stained Glass" procedural system
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+
+        const colors = [
+            new THREE.Color(0x4466ff), // Glass Blue
+            new THREE.Color(0xff3333), // Glass Ruby
+            new THREE.Color(0x33cc66), // Glass Emerald
+            new THREE.Color(0xc5a059), // Gold
+            new THREE.Color(0x8844ff)  // Deep Purple
+        ];
+
+        const shards = [];
+        const shardCount = 40;
+
+        function createShard() {
+            const geometry = new THREE.IcosahedronGeometry(Math.random() * 2 + 1, 0);
+            const material = new THREE.MeshPhysicalMaterial({
+                color: colors[Math.floor(Math.random() * colors.length)],
+                metalness: 0.1,
+                roughness: 0.05,
+                transmission: 0.9,
+                thickness: 0.5,
+                transparent: true,
+                opacity: 0.6,
+                side: THREE.DoubleSide,
+            });
+            const mesh = new THREE.Mesh(geometry, material);
+            
+            mesh.position.set(
+                (Math.random() - 0.5) * 20,
+                (Math.random() - 0.5) * 20,
+                (Math.random() - 0.5) * 10
+            );
+            mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
+            
+            // Random scale to make it look like a shard
+            const s = new THREE.Vector3(
+                Math.random() * 2,
+                Math.random() * 0.2,
+                Math.random() * 2
+            );
+            mesh.scale.set(s.x, s.y, s.z);
+            
+            return mesh;
+        }
+
+        for(let i = 0; i < shardCount; i++) {
+            const shard = createShard();
+            scene.add(shard);
+            shards.push({
+                mesh: shard,
+                velocity: new THREE.Vector3((Math.random()-0.5)*0.01, (Math.random()-0.5)*0.01, (Math.random()-0.5)*0.01),
+                rotVel: new THREE.Vector3(Math.random()*0.01, Math.random()*0.01, Math.random()*0.01)
+            });
+        }
+
+        const light1 = new THREE.PointLight(0xffffff, 100);
+        light1.position.set(10, 10, 10);
+        scene.add(light1);
+
+        const light2 = new THREE.PointLight(0xc5a059, 50);
+        light2.position.set(-10, -10, 10);
+        scene.add(light2);
+
+        const ambient = new THREE.AmbientLight(0xffffff, 0.2);
+        scene.add(ambient);
+
+        camera.position.z = 12;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            shards.forEach(s => {
+                s.mesh.position.add(s.velocity);
+                s.mesh.rotation.x += s.rotVel.x;
+                s.mesh.rotation.y += s.rotVel.y;
+                
+                if(Math.abs(s.mesh.position.x) > 15) s.velocity.x *= -1;
+                if(Math.abs(s.mesh.position.y) > 15) s.velocity.y *= -1;
+            });
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // --- GSAP Animations ---
+        gsap.registerPlugin(ScrollTrigger);
+
+        // Hero load
+        const tl = gsap.timeline();
+        tl.to('.hero h1', { opacity: 1, y: 0, duration: 1.5, ease: "expo.out", delay: 0.5 })
+          .to('.hero p', { opacity: 1, y: 0, duration: 1.5, ease: "expo.out" }, "-=1");
+
+        // Story scroll
+        gsap.from('.story-content h2', {
+            scrollTrigger: {
+                trigger: '.story',
+                start: 'top 80%',
+            },
+            opacity: 0,
+            x: -50,
+            duration: 1,
+            ease: "power3.out"
+        });
+
+        // Process steps stagger
+        gsap.from('.process-step', {
+            scrollTrigger: {
+                trigger: '.process-grid',
+                start: 'top 80%',
+            },
+            opacity: 0,
+            y: 50,
+            stagger: 0.2,
+            duration: 1,
+            ease: "power3.out"
+        });
+
+        // Portfolio items
+        gsap.from('.work-item', {
+            scrollTrigger: {
+                trigger: '.portfolio',
+                start: 'top 80%',
+            },
+            opacity: 0,
+            scale: 0.9,
+            stagger: 0.1,
+            duration: 1,
+            ease: "power3.out"
+        });
+
+        // Three.js camera movement on scroll
+        window.addEventListener('scroll', () => {
+            const scrollPercent = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+            camera.position.z = 12 - (scrollPercent * 5);
+            camera.position.x = Math.sin(scrollPercent * Math.PI) * 2;
+            camera.rotation.y = scrollPercent * 0.5;
+        });
+
+    </script>
+</body>
+</html>

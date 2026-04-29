@@ -1,0 +1,883 @@
+<!--
+51536 tokens 483.5 t/s prompt processing / 48.2 t/s generation
+Qwen3.6 35b mlx community
+It a pretty outcome, the website is in french as some of the other variants. 
+The showcased works are actually expandable which is a first in all the models so far. The other models simply didn't expand the works when you click on them
+The designs are not unique or very coherent though, they are pretty but share a lot of the same layouts and colours, you don't see the authenticity between different works. 
+The storytelling part is good and the format of the website. This is another deisgn which doesn't actually have a cursor. 
+Overall its a good performance but not exquisite or unique. 
+873 lines
+-->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lumière Atelier — Vitraux d'Exception depuis 1987</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Karla:wght@200;300;400&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+--noir:#050508;--charcoal:#0a0a10;--midnight:#0e0e1a;
+--light:#f5f0e8;--warm:#e8dfd2;--cream:#faf7f0;
+--ruby:#8b1a2b;--sapphire:#1a3a6b;--emerald:#1a5c3a;
+--amethyst:#5b2a7b;--citrine:#b8860b;--topaz:#c4712b;
+--gold:#c9a84c;--pale-gold:#e8d5a0;
+}
+html{scroll-behavior:smooth;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--gold) var(--noir)}
+body{background:var(--noir);color:var(--light);font-family:'Karla',sans-serif;font-weight:300;line-height:1.8;overflow-x:hidden;cursor:none}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:var(--noir)}
+::-webkit-scrollbar-thumb{background:var(--gold);border-radius:2px}
+
+/* ═══════════ CUSTOM CURSOR ═══════════ */
+.cursor{position:fixed;width:20px;height:20px;border:1px solid var(--gold);border-radius:50%;pointer-events:none;z-index:10000;transition:transform .15s ease,opacity .15s;transform:translate(-50%,-50%);mix-blend-mode:difference}
+.cursor-dot{position:fixed;width:4px;height:4px;background:var(--gold);border-radius:50%;pointer-events:none;z-index:10001;transform:translate(-50%,-50%);mix-blend-mode:difference}
+.cursor.hover{transform:translate(-50%,-50%) scale(3);border-color:var(--pale-gold)}
+.cursor-glow{position:fixed;width:300px;height:300px;border-radius:50%;pointer-events:none;z-index:9999;background:radial-gradient(circle,rgba(201,168,76,.04) 0%,transparent 70%);transform:translate(-50%,-50%)}
+
+/* ═══════════ HERO / THREE.JS ═══════════ */
+#hero{position:relative;height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#hero-canvas{position:absolute;inset:0;z-index:1}
+.hero-content{position:relative;z-index:10;text-align:center;pointer-events:none}
+.hero-title{font-family:'Cormorant Garamond',serif;font-weight:300;font-size:clamp(3rem,8vw,8rem);letter-spacing:.15em;text-transform:uppercase;color:var(--cream);text-shadow:0 0 80px rgba(201,168,76,.3)}
+.hero-line{width:1px;height:80px;background:linear-gradient(to bottom,transparent,var(--gold));margin:2rem auto;opacity:0;animation:lineGrow 2s ease 1s forwards}
+.hero-subtitle{font-family:'Cormorant Garamond',serif;font-weight:300;font-style:italic;font-size:clamp(1rem,2vw,1.6rem);letter-spacing:.3em;color:var(--pale-gold);opacity:0;animation:fadeUp 2s ease 1.5s forwards}
+.hero-year{font-size:.75rem;letter-spacing:.5em;text-transform:uppercase;color:rgba(201,168,76,.5);margin-top:3rem;opacity:0;animation:fadeUp 2s ease 2s forwards}
+.scroll-hint{position:absolute;bottom:3rem;left:50%;transform:translateX(-50%);z-index:10;display:flex;flex-direction:column;align-items:center;gap:.5rem;opacity:0;animation:fadeUp 1s ease 3s forwards}
+.scroll-hint span{font-size:.65rem;letter-spacing:.4em;text-transform:uppercase;color:rgba(201,168,76,.4)}
+.scroll-line{width:1px;height:40px;background:linear-gradient(to bottom,var(--gold),transparent);animation:scrollPulse 2s ease infinite}
+@keyframes lineGrow{to{opacity:1;height:100px}}
+@keyframes fadeUp{to{opacity:1;transform:translateY(0)}}
+.hero-content{transform:translateY(30px)}
+.hero-subtitle{transform:translateY(20px)}
+.hero-year{transform:translateY(10px)}
+@keyframes scrollPulse{0%,100%{opacity:.3;transform:scaleY(1)}50%{opacity:.8;transform:scaleY(1.3)}}
+
+/* ═══════════ NAVIGATION ═══════════ */
+nav{position:fixed;top:0;left:0;right:0;z-index:1000;padding:2rem 3rem;display:flex;justify-content:space-between;align-items:center;transition:all .6s cubic-bezier(.16,1,.3,1);mix-blend-mode:difference}
+nav.scrolled{padding:1rem 3rem;background:rgba(5,5,8,.85);backdrop-filter:blur(20px);mix-blend-mode:normal}
+.nav-logo{font-family:'Cormorant Garamond',serif;font-weight:300;font-size:1.2rem;letter-spacing:.3em;text-transform:uppercase;color:var(--cream);text-decoration:none}
+.nav-links{display:flex;gap:3rem;list-style:none}
+.nav-links a{font-size:.7rem;letter-spacing:.3em;text-transform:uppercase;color:var(--light);text-decoration:none;opacity:.6;transition:opacity .3s;position:relative}
+.nav-links a::after{content:'';position:absolute;bottom:-4px;left:0;width:0;height:1px;background:var(--gold);transition:width .4s cubic-bezier(.16,1,.3,1)}
+.nav-links a:hover{opacity:1}
+.nav-links a:hover::after{width:100%}
+
+/* ═══════════ SECTION COMMONS ═══════════ */
+section{position:relative;padding:12rem 3rem;max-width:1400px;margin:0 auto}
+.section-number{font-family:'Cormorant Garamond',serif;font-size:clamp(6rem,12vw,14rem);font-weight:300;color:rgba(201,168,76,.04);position:absolute;top:4rem;right:3rem;user-select:none;line-height:1}
+.section-label{font-size:.65rem;letter-spacing:.5em;text-transform:uppercase;color:var(--gold);margin-bottom:2rem;display:flex;align-items:center;gap:2rem}
+.section-label::before{content:'';width:40px;height:1px;background:var(--gold)}
+.section-heading{font-family:'Cormorant Garamond',serif;font-weight:300;font-size:clamp(2.5rem,5vw,4.5rem);line-height:1.15;max-width:800px}
+.reveal{opacity:0;transform:translateY(60px);transition:all 1.2s cubic-bezier(.16,1,.3,1)}
+.reveal.visible{opacity:1;transform:translateY(0)}
+.reveal-delay-1{transition-delay:.15s}
+.reveal-delay-2{transition-delay:.3s}
+.reveal-delay-3{transition-delay:.5s}
+.reveal-delay-4{transition-delay:.7s}
+
+/* ═══════════ LIGHT DIVIDERS ═══════════ */
+.light-divider{width:100%;height:1px;margin:0 auto;position:relative;overflow:hidden}
+.light-divider::before{content:'';position:absolute;top:0;left:-100%;width:300%;height:100%;background:linear-gradient(90deg,transparent,rgba(201,168,76,.4),rgba(139,26,43,.3),rgba(26,58,107,.3),rgba(26,92,58,.3),transparent);animation:lightSweep 8s linear infinite}
+@keyframes lightSweep{to{left:0}}
+.lead-line{width:100%;height:3px;margin:4rem auto;opacity:.15;display:flex;justify-content:center;gap:3px}
+.lead-segment{height:100%;background:linear-gradient(90deg,#1a1a2e,#2a2a3e,#1a1a2e);border-radius:1px}
+
+/* ═══════════ STUDIO STORY ═══════════ */
+#studio{min-height:100vh;display:flex;flex-direction:column;justify-content:center}
+.story-grid{display:grid;grid-template-columns:1fr 1fr;gap:6rem;align-items:start;margin-top:4rem}
+.story-text p{font-size:1.05rem;color:rgba(245,240,232,.75);margin-bottom:1.8rem;line-height:2}
+.story-text p:first-child::first-letter{font-family:'Cormorant Garamond',serif;font-size:3.5rem;float:left;line-height:1;margin-right:.5rem;color:var(--gold);font-weight:300}
+.story-aside{position:relative;padding:3rem;border-left:1px solid rgba(201,168,76,.15)}
+.story-aside p{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.4rem;line-height:1.8;color:var(--pale-gold);font-weight:300}
+.story-aside .attr{font-style:normal;font-size:.7rem;letter-spacing:.3em;text-transform:uppercase;color:rgba(201,168,76,.4);margin-top:1.5rem;display:block}
+.glass-panels{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin-top:5rem}
+.glass-panel{aspect-ratio:3/4;position:relative;overflow:hidden;border-radius:2px}
+.glass-panel::before{content:'';position:absolute;inset:0;border:1px solid rgba(201,168,76,.1)}
+.glass-panel::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(245,240,232,.03),transparent 40%,rgba(201,168,76,.02))}
+
+/* ═══════════ CSS STAINED GLASS ART ═══════════ */
+.stained-glass{width:100%;height:100%;position:relative;overflow:hidden}
+.stained-glass .cell{position:absolute;opacity:.85;filter:blur(.5px)}
+.stained-glass .lead{position:absolute;background:linear-gradient(180deg,#1a1a2e,#2d2d3d,#1a1a2e);z-index:2}
+.stained-glass .glint{position:absolute;background:radial-gradient(circle,rgba(255,255,255,.15) 0%,transparent 70%);z-index:3}
+.gp-1 .cell{background:linear-gradient(135deg,#8b1a2b,#c43040,#8b1a2b)}
+.gp-1 .cell:nth-child(2){background:linear-gradient(225deg,#1a3a6b,#2a5a9b,#1a3a6b)}
+.gp-1 .cell:nth-child(3){background:linear-gradient(315deg,#b8860b,#d4a030,#b8860b)}
+.gp-1 .cell:nth-child(4){background:linear-gradient(45deg,#1a5c3a,#2a7c4a,#1a5c3a)}
+.gp-1 .cell:nth-child(5){background:linear-gradient(180deg,#5b2a7b,#7b3a9b,#5b2a7b)}
+.gp-1 .cell:nth-child(6){background:linear-gradient(90deg,#c4712b,#d4813b,#c4712b)}
+.gp-1 .cell:nth-child(7){background:linear-gradient(270deg,#1a3a6b,#1a5c3a,#1a3a6b)}
+.gp-1 .cell:nth-child(8){background:linear-gradient(160deg,#8b1a2b,#5b2a7b,#8b1a2b)}
+.gp-1 .cell:nth-child(9){background:linear-gradient(200deg,#b8860b,#c4712b,#b8860b)}
+.gp-1 .cell:nth-child(10){background:linear-gradient(120deg,#2a5a9b,#1a5c3a,#2a5a9b)}
+
+.gp-2 .cell{background:linear-gradient(135deg,#1a3a6b,#0a2040,#1a3a6b)}
+.gp-2 .cell:nth-child(2){background:linear-gradient(225deg,#8b1a2b,#a02035,#8b1a2b)}
+.gp-2 .cell:nth-child(3){background:linear-gradient(315deg,#c9a84c,#d4b85c,#c9a84c)}
+.gp-2 .cell:nth-child(4){background:linear-gradient(45deg,#5b2a7b,#4a1a6a,#5b2a7b)}
+.gp-2 .cell:nth-child(5){background:linear-gradient(180deg,#1a5c3a,#0a4c2a,#1a5c3a)}
+.gp-2 .cell:nth-child(6){background:linear-gradient(90deg,#c4712b,#b4611b,#c4712b)}
+
+.gp-3 .cell{background:linear-gradient(135deg,#b8860b,#9a7008,#b8860b)}
+.gp-3 .cell:nth-child(2){background:linear-gradient(225deg,#8b1a2b,#7a1525,#8b1a2b)}
+.gp-3 .cell:nth-child(3){background:linear-gradient(315deg,#1a5c3a,#0f4c2a,#1a5c3a)}
+.gp-3 .cell:nth-child(4){background:linear-gradient(45deg,#1a3a6b,#0a2a5b,#1a3a6b)}
+.gp-3 .cell:nth-child(5){background:linear-gradient(180deg,#5b2a7b,#4a206a,#5b2a7b)}
+.gp-3 .cell:nth-child(6){background:linear-gradient(90deg,#c4712b,#a4611b,#c4712b)}
+
+.gp-4 .cell{background:linear-gradient(135deg,#5b2a7b,#6b3a8b,#5b2a7b)}
+.gp-4 .cell:nth-child(2){background:linear-gradient(225deg,#1a3a6b,#1a2a5b,#1a3a6b)}
+.gp-4 .cell:nth-child(3){background:linear-gradient(315deg,#c9a84c,#b9983c,#c9a84c)}
+.gp-4 .cell:nth-child(4){background:linear-gradient(45deg,#8b1a2b,#7b1020,#8b1a2b)}
+.gp-4 .cell:nth-child(5){background:linear-gradient(180deg,#1a5c3a,#0a4c2a,#1a5c3a)}
+.gp-4 .cell:nth-child(6){background:linear-gradient(270deg,#c4712b,#b4611b,#c4712b)}
+
+.gp-5 .cell{background:linear-gradient(135deg,#1a5c3a,#0a4c2a,#1a5c3a)}
+.gp-5 .cell:nth-child(2){background:linear-gradient(225deg,#c9a84c,#d4b85c,#c9a84c)}
+.gp-5 .cell:nth-child(3){background:linear-gradient(315deg,#8b1a2b,#9b2a3b,#8b1a2b)}
+.gp-5 .cell:nth-child(4){background:linear-gradient(45deg,#1a3a6b,#0a2a5b,#1a3a6b)}
+.gp-5 .cell:nth-child(5){background:linear-gradient(180deg,#5b2a7b,#4a206a,#5b2a7b)}
+.gp-5 .cell:nth-child(6){background:linear-gradient(90deg,#c4712b,#d4813b,#c4712b)}
+
+.gp-6 .cell{background:linear-gradient(135deg,#c9a84c,#d4b85c,#c9a84c)}
+.gp-6 .cell:nth-child(2){background:linear-gradient(225deg,#1a3a6b,#1a2a5b,#1a3a6b)}
+.gp-6 .cell:nth-child(3){background:linear-gradient(315deg,#8b1a2b,#9b2a3b,#8b1a2b)}
+.gp-6 .cell:nth-child(4){background:linear-gradient(45deg,#1a5c3a,#0a4c2a,#1a5c3a)}
+.gp-6 .cell:nth-child(5){background:linear-gradient(180deg,#5b2a7b,#6b3a8b,#5b2a7b)}
+.gp-6 .cell:nth-child(6){background:linear-gradient(90deg,#c4712b,#d4813b,#c4712b)}
+
+/* ═══════════ PROCESS ═══════════ */
+#process{min-height:100vh}
+.process-steps{margin-top:5rem;display:flex;flex-direction:column;gap:0}
+.process-step{display:grid;grid-template-columns:200px 1fr 1fr;gap:4rem;padding:4rem 0;border-bottom:1px solid rgba(201,168,76,.06);align-items:start;position:relative}
+.step-number{font-family:'Cormorant Garamond',serif;font-size:5rem;font-weight:300;color:rgba(201,168,76,.08);line-height:1}
+.step-title{font-family:'Cormorant Garamond',serif;font-size:1.8rem;font-weight:400;color:var(--cream);margin-bottom:1rem}
+.step-desc{font-size:.95rem;color:rgba(245,240,232,.6);line-height:1.9;max-width:500px}
+.step-visual{position:relative;height:120px;margin-top:1rem}
+.step-glass{width:100%;height:100%;border-radius:2px;position:relative;overflow:hidden}
+.step-glass .cell{position:absolute;opacity:.7}
+.step-0 .step-glass .cell{background:linear-gradient(135deg,#5b2a7b,#7b3a9b)}
+.step-1 .step-glass .cell:nth-child(2){background:linear-gradient(225deg,#8b1a2b,#a02035)}
+.step-2 .step-glass .cell:nth-child(3){background:linear-gradient(315deg,#1a5c3a,#2a7c4a)}
+.step-3 .step-glass .cell:nth-child(4){background:linear-gradient(45deg,#c9a84c,#d4b85c)}
+
+/* ═══════════ PORTFOLIO ═══════════ */
+#portfolio{min-height:100vh}
+.portfolio-grid{margin-top:5rem;display:grid;grid-template-columns:repeat(3,1fr);gap:2rem}
+.portfolio-item{position:relative;cursor:pointer;group:true}
+.portfolio-thumb{aspect-ratio:4/5;position:relative;overflow:hidden;border-radius:2px}
+.portfolio-thumb .glass-panel{width:100%;height:100%;transition:transform 1.2s cubic-bezier(.16,1,.3,1)}
+.portfolio-item:hover .glass-panel{transform:scale(1.05)}
+.portfolio-thumb::before{content:'';position:absolute;inset:0;z-index:3;border:1px solid rgba(201,168,76,.08);border-radius:2px;transition:border-color .4s}
+.portfolio-item:hover .portfolio-thumb::before{border-color:rgba(201,168,76,.25)}
+.portfolio-thumb::after{content:'';position:absolute;inset:0;z-index:4;background:linear-gradient(180deg,transparent 30%,rgba(5,5,8,.9) 100%);transition:opacity .4s}
+.portfolio-item:hover .portfolio-thumb::after{opacity:.6}
+.portfolio-info{padding:1.5rem 0.5rem;position:relative;z-index:5}
+.portfolio-name{font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:400;color:var(--cream);margin-bottom:.3rem;transition:color .3s}
+.portfolio-item:hover .portfolio-name{color:var(--gold)}
+.portfolio-meta{font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(201,168,76,.4)}
+
+/* Portfolio detail overlay */
+.portfolio-detail{position:fixed;inset:0;z-index:2000;background:rgba(5,5,8,.97);backdrop-filter:blur(30px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .6s cubic-bezier(.16,1,.3,1)}
+.portfolio-detail.active{opacity:1;pointer-events:auto}
+.detail-close{position:absolute;top:3rem;right:3rem;font-size:.7rem;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);cursor:pointer;border:none;background:none;font-family:'Karla',sans-serif;transition:opacity .3s}
+.detail-close:hover{opacity:.5}
+.detail-content{display:grid;grid-template-columns:1.2fr 1fr;gap:6rem;max-width:1200px;padding:3rem;align-items:center}
+.detail-art{aspect-ratio:4/5;position:relative;overflow:hidden;border-radius:2px;box-shadow:0 40px 100px rgba(0,0,0,.5)}
+.detail-text h2{font-family:'Cormorant Garamond',serif;font-weight:300;font-size:2.5rem;line-height:1.2;margin-bottom:1rem}
+.detail-text .year{font-size:.7rem;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);margin-bottom:2rem;display:block}
+.detail-text .loc{font-size:.8rem;color:rgba(201,168,76,.5);margin-bottom:2rem;letter-spacing:.1em}
+.detail-text p{font-size:1rem;color:rgba(245,240,232,.7);line-height:2}
+.detail-text .specs{margin-top:2.5rem;padding-top:2rem;border-top:1px solid rgba(201,168,76,.1)}
+.detail-text .specs span{display:block;font-size:.75rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(201,168,76,.4);margin-bottom:.3rem}
+.detail-text .specs strong{display:block;font-family:'Cormorant Garamond',serif;font-size:1.1rem;font-weight:400;color:var(--light);margin-bottom:1rem}
+
+/* ═══════════ CONTACT ═══════════ */
+#contact{min-height:80vh;display:flex;flex-direction:column;justify-content:center}
+.contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:6rem;margin-top:4rem}
+.contact-text p{font-size:1.05rem;color:rgba(245,240,232,.7);margin-bottom:1.5rem;line-height:2}
+.contact-details{margin-top:3rem}
+.contact-row{display:flex;gap:2rem;margin-bottom:2rem;padding-bottom:2rem;border-bottom:1px solid rgba(201,168,76,.06)}
+.contact-label{font-size:.65rem;letter-spacing:.4em;text-transform:uppercase;color:var(--gold);min-width:120pt}
+.contact-value{font-size:.95rem;color:rgba(245,240,232,.7)}
+.contact-form{display:flex;flex-direction:column;gap:1.5rem}
+.form-group{position:relative}
+.form-group input,.form-group textarea{width:100%;background:transparent;border:none;border-bottom:1px solid rgba(201,168,76,.15);padding:1.2rem 0;color:var(--cream);font-family:'Karla',sans-serif;font-size:1rem;font-weight:300;outline:none;transition:border-color .3s}
+.form-group input:focus,.form-group textarea:focus{border-color:var(--gold)}
+.form-group label{position:absolute;left:0;top:1.2rem;font-size:.85rem;color:rgba(245,240,232,.3);letter-spacing:.1em;transition:all .3s;pointer-events:none}
+.form-group input:focus~label,.form-group input:not(:placeholder-shown)~label,
+.form-group textarea:focus~label,.form-group textarea:not(:placeholder-shown)~label{top:-.5rem;font-size:.65rem;color:var(--gold);letter-spacing:.3em;text-transform:uppercase}
+.form-group textarea{resize:none;height:120px}
+.submit-btn{align-self:flex-start;padding:1.2rem 3rem;background:transparent;border:1px solid var(--gold);color:var(--gold);font-family:'Karla',sans-serif;font-size:.75rem;letter-spacing:.4em;text-transform:uppercase;cursor:pointer;transition:all .4s cubic-bezier(.16,1,.3,1);position:relative;overflow:hidden}
+.submit-btn::before{content:'';position:absolute;inset:0;background:var(--gold);transform:translateX(-101%);transition:transform .4s cubic-bezier(.16,1,.3,1)}
+.submit-btn:hover::before{transform:translateX(0)}
+.submit-btn span{position:relative;z-index:1;transition:color .4s}
+.submit-btn:hover span{color:var(--noir)}
+
+/* ═══════════ FOOTER ═══════════ */
+footer{padding:4rem 3rem;border-top:1px solid rgba(201,168,76,.06);display:flex;justify-content:space-between;align-items:center}
+.footer-text{font-size:.7rem;letter-spacing:.2em;color:rgba(201,168,76,.25)}
+.footer-back{font-size:.7rem;letter-spacing:.3em;text-transform:uppercase;color:rgba(201,168,76,.3);text-decoration:none;transition:color .3s;cursor:pointer}
+.footer-back:hover{color:var(--gold)}
+
+/* ═══════════ AMBIENT PARTICLES ═══════════ */
+.dust{position:fixed;pointer-events:none;z-index:9998}
+.dust-particle{position:absolute;width:2px;height:2px;background:rgba(201,168,76,.2);border-radius:50%;animation:dustFloat linear infinite}
+@keyframes dustFloat{0%{transform:translateY(100vh) rotate(0deg);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translateY(-100vh) rotate(720deg);opacity:0}}
+
+/* ═══════════ RESPONSIVE ═══════════ */
+@media(max-width:1024px){
+  .story-grid,.contact-grid,.detail-content{grid-template-columns:1fr;gap:3rem}
+  .process-step{grid-template-columns:80px 1fr;gap:2rem}
+  .step-visual{display:none}
+  .portfolio-grid{grid-template-columns:repeat(2,1fr)}
+  .glass-panels{grid-template-columns:repeat(2,1fr)}
+  section{padding:8rem 2rem}
+  .nav-links{display:none}
+}
+@media(max-width:640px){
+  .portfolio-grid{grid-template-columns:1fr}
+  .glass-panels{grid-template-columns:1fr}
+  section{padding:6rem 1.5rem}
+  nav{padding:1.5rem}
+}
+</style>
+</head>
+<body>
+
+<!-- Custom Cursor -->
+<div class="cursor" id="cursor"></div>
+<div class="cursor-dot" id="cursor-dot"></div>
+<div class="cursor-glow" id="cursor-glow"></div>
+
+<!-- Dust Particles -->
+<div class="dust" id="dust"></div>
+
+<!-- Navigation -->
+<nav id="nav">
+  <a href="#hero" class="nav-logo">Lumière Atelier</a>
+  <ul class="nav-links">
+    <li><a href="#studio" class="hoverable">L'Atelier</a></li>
+    <li><a href="#process" class="hoverable">Processus</a></li>
+    <li><a href="#portfolio" class="hoverable">Œuvres</a></li>
+    <li><a href="#contact" class="hoverable">Contact</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <canvas id="hero-canvas"></canvas>
+  <div class="hero-content">
+    <h1 class="hero-title">Lumière<br>Atelier</h1>
+    <div class="hero-line"></div>
+    <p class="hero-subtitle">Vitraux d'exception sur mesure</p>
+    <p class="hero-year">Lyon · Depuis 1987</p>
+  </div>
+  <div class="scroll-hint">
+    <span>Découvrir</span>
+    <div class="scroll-line"></div>
+  </div>
+</section>
+
+<!-- STUDIO -->
+<section id="studio">
+  <span class="section-number reveal">01</span>
+  <div class="section-label reveal">L'Atelier</div>
+  <h2 class="section-heading reveal reveal-delay-1">Où la lumière<br>devient matière</h2>
+  <div class="story-grid">
+    <div class="story-text">
+      <p class="reveal reveal-delay-2">Niché au cœur de la Vieille Ville de Lyon, dans un atelier-hôtel particulier du quinzième siècle, Lumière Atelier est né de la conviction que le vitrail n'est pas un art du passé — c'est un art de la lumière présente, vivante, qui change avec chaque heure du jour et chaque saison de l'année.</p>
+      <p class="reveal reveal-delay-3">Fondé par Élodie Marchand après dix années passées à restaurer les verrières de la basilique de Fourvière, notre atelier associe les techniques séculaires de la verrerie d'art aux approches les plus contemporaines de la conception architecturale. Chaque pièce qui sort de notre atelier porte en elle l'empreinte du geste humain — cette imperfection parfaite qui distingue le véritable vitrail de toute reproduction industrielle.</p>
+      <p class="reveal reveal-delay-4">Notre démarche est intimiste. Nous ne produits pas de vitraux : nous sculptons la lumière. Chaque commande est un dialogue entre l'architecte, l'archéologue du lumière, et le verrier qui deviendra son intermédiaire entre le visible et l'invisible.</p>
+    </div>
+    <div class="story-aside reveal reveal-delay-3">
+      <p>« Le verre n'est pas un matériau que l'on travaille — c'est une lumière que l'on captive. Chaque feuille de verre que nous sélectionnons possède une âme propre, une manière unique de respirer avec le soleil. »</p>
+      <span class="attr">— Élodie Marchand, fondatrice</span>
+    </div>
+  </div>
+  <div class="glass-panels">
+    <div class="glass-panel reveal">
+      <div class="stained-glass gp-1">
+        <div class="cell" style="width:45%;height:40%;top:5%;left:5%"></div>
+        <div class="cell" style="width:45%;height:40%;top:5%;right:5%"></div>
+        <div class="cell" style="width:40%;height:30%;top:48%;left:30%"></div>
+        <div class="cell" style="width:30%;height:22%;top:48%;left:5%"></div>
+        <div class="cell" style="width:30%;height:22%;top:48%;right:5%"></div>
+        <div class="cell" style="width:60%;height:30%;top:75%;left:20%"></div>
+        <div class="cell" style="width:25%;height:18%;top:10%;left:38%"></div>
+        <div class="cell" style="width:20%;height:15%;top:53%;left:5%"></div>
+        <div class="cell" style="width:20%;height:15%;top:53%;right:5%"></div>
+        <div class="cell" style="width:35%;height:20%;top:78%;left:33%"></div>
+        <div class="lead" style="width:2px;height:100%;left:49.5%"></div>
+        <div class="lead" style="width:100%;height:2px;top:47%"></div>
+        <div class="lead" style="width:100%;height:2px;top:74%"></div>
+        <div class="lead" style="width:2px;height:50%;left:30%"></div>
+        <div class="lead" style="width:2px;height:50%;left:68%"></div>
+        <div class="glint" style="width:30%;height:20%;top:10%;left:10%"></div>
+      </div>
+    </div>
+    <div class="glass-panel reveal reveal-delay-1">
+      <div class="stained-glass gp-2">
+        <div class="cell" style="width:50%;height:45%;top:5%;left:0%"></div>
+        <div class="cell" style="width:50%;height:45%;top:5%;right:0%"></div>
+        <div class="cell" style="width:100%;height:20%;top:50%;left:0%"></div>
+        <div class="cell" style="width:35%;height:30%;top:70%;left:0%"></div>
+        <div class="cell" style="width:35%;height:30%;top:70%;right:0%"></div>
+        <div class="cell" style="width:30%;height:25%;top:70%;left:35%"></div>
+        <div class="lead" style="width:100%;height:2px;top:49%"></div>
+        <div class="lead" style="width:2px;height:100%;left:49.5%"></div>
+        <div class="lead" style="width:100%;height:2px;top:69%"></div>
+        <div class="glint" style="width:40%;height:30%;top:15%;right:10%"></div>
+      </div>
+    </div>
+    <div class="glass-panel reveal reveal-delay-2">
+      <div class="stained-glass gp-3">
+        <div class="cell" style="width:30%;height:25%;top:8%;left:10%"></div>
+        <div class="cell" style="width:30%;height:25%;top:8%;right:10%"></div>
+        <div class="cell" style="width:40%;height:35%;top:35%;left:30%"></div>
+        <div class="cell" style="width:25%;height:20%;top:35%;left:5%"></div>
+        <div class="cell" style="width:25%;height:20%;top:35%;right:5%"></div>
+        <div class="cell" style="width:50%;height:35%;top:70%;left:25%"></div>
+        <div class="lead" style="width:2px;height:100%;left:49.5%"></div>
+        <div class="lead" style="width:100%;height:2px;top:34%"></div>
+        <div class="lead" style="width:100%;height:2px;top:69%"></div>
+        <div class="glint" style="width:35%;height:25%;top:12%;left:35%"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="light-divider"></div>
+
+<!-- PROCESS -->
+<section id="process">
+  <span class="section-number reveal">02</span>
+  <div class="section-label reveal">Le Processus</div>
+  <h2 class="section-heading reveal reveal-delay-1">De l'obscurité<br>à la lumière</h2>
+  <div class="process-steps">
+    <div class="process-step step-0 reveal">
+      <div class="step-number">I</div>
+      <div>
+        <h3 class="step-title">La Rencontre</h3>
+        <p class="step-desc">Tout commence par un entretien dans notre atelier. Nous écoutons — vraiment — votre projet, l'espace concerné, la quality de lumière que vous souhaitez créer. C'est un moment de contemplation partagée. Nous vous montrons des échantillons de verre, des études précédentes, et nous discutons de l'invisible : ce que la lumière fera de votre espace quand vous ne la regardez plus.</p>
+      </div>
+      <div class="step-visual">
+        <div class="step-glass">
+          <div class="cell" style="width:50%;height:80%;top:10%;left:25%;background:linear-gradient(180deg,#5b2a7b,#7b3a9b);border-radius:2px"></div>
+          <div class="cell" style="width:30%;height:40%;top:30%;left:5%;background:linear-gradient(180deg,#3a1a5b,#5b2a7b);border-radius:2px"></div>
+          <div class="cell" style="width:30%;height:40%;top:30%;right:5%;background:linear-gradient(180deg,#3a1a5b,#5b2a7b);border-radius:2px"></div>
+        </div>
+      </div>
+    </div>
+    <div class="process-step step-1 reveal">
+      <div class="step-number">II</div>
+      <div>
+        <h3 class="step-title">Le Dessin</h3>
+        <p class="step-desc">Notre équipe conçoit le carton au trait, cette pièce maîtresse qui est à la fois plan technique et œuvre d'art autonome. Chaque ligne est tracée à la main. Le carton définit la composition, le câblage du plomb, et la palette chromatique exacte — chaque feuille de verre étant numérotée et référencée dans un inventaire qui accompagnera l'œuvre pendant des siècles.</p>
+      </div>
+      <div class="step-visual">
+        <div class="step-glass">
+          <div class="cell" style="width:40%;height:60%;top:20%;left:30%;background:linear-gradient(180deg,#8b1a2b,#a02035);border-radius:2px"></div>
+          <div class="cell" style="width:25%;height:35%;top:25%;left:5%;background:linear-gradient(180deg,#6a1020,#8b1a2b);border-radius:2px"></div>
+          <div class="cell" style="width:25%;height:35%;top:25%;right:5%;background:linear-gradient(180deg,#6a1020,#8b1a2b);border-radius:2px"></div>
+        </div>
+      </div>
+    </div>
+    <div class="process-step step-2 reveal">
+      <div class="step-number">III</div>
+      <div>
+        <h3 class="step-title">La Couleur</h3>
+        <p class="step-desc">Le choix du verre est notre geste le plus sacré. Nous travaillons avec trois verreries d'art —две en France, une en Bohême— et nous possédons le plus grand choix de verre ancien en Europe. Chaque feuille est découpée au coupe-verre d'argent, chaque bordure est moulée à la main pour créer cet effet de vague qui fait vibrer la lumière. Le verre antique, c'est du verre qui contient de l'air — des millions de bulles microscopiques qui transforment chaque traversée de lumière en expérience unique.</p>
+      </div>
+      <div class="step-visual">
+        <div class="step-glass">
+          <div class="cell" style="width:55%;height:70%;top:15%;left:22%;background:linear-gradient(180deg,#1a5c3a,#2a7c4a);border-radius:2px"></div>
+          <div class="cell" style="width:22%;height:35%;top:20%;left:5%;background:linear-gradient(180deg,#0f3c2a,#1a5c3a);border-radius:2px"></div>
+          <div class="cell" style="width:22%;height:35%;top:20%;right:5%;background:linear-gradient(180deg,#0f3c2a,#1a5c3a);border-radius:2px"></div>
+        </div>
+      </div>
+    </div>
+    <div class="process-step step-3 reveal">
+      <div class="step-number">IV</div>
+      <div>
+        <h3 class="step-title">La Patine</h3>
+        <p class="step-desc">La pose au plomb, le masticage, la patine — ce sont les gestes finaux qui scellent la lumière dans sa forme définitive. Chaque joint de plomb est moulé au couteau de vitrailliste. Le mastic, composé selon notre recette personnelle à base d'huile de lin et de blanc de Meudre, pénètre dans chaque articulation. Puis la patine, couche de silicate de zinc qui protège et révèle les couleurs. L'œuvre est ensuite montée sur un châssis en chêne centenaire, assemblé à queue d'aronde, et ready pour une vie de plusieurs siècles.</p>
+      </div>
+      <div class="step-visual">
+        <div class="step-glass">
+          <div class="cell" style="width:50%;height:75%;top:12%;left:25%;background:linear-gradient(180deg,#c9a84c,#d4b85c);border-radius:2px"></div>
+          <div class="cell" style="width:25%;height:38%;top:18%;left:8%;background:linear-gradient(180deg,#a48830,#c9a84c);border-radius:2px"></div>
+          <div class="cell" style="width:25%;height:38%;top:18%;right:8%;background:linear-gradient(180deg,#a48830,#c9a84c);border-radius:2px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="light-divider"></div>
+
+<!-- PORTFOLIO -->
+<section id="portfolio">
+  <span class="section-number reveal">03</span>
+  <div class="section-label reveal">Œuvres</div>
+  <h2 class="section-heading reveal reveal-delay-1">La lumière<br>incarnée</h2>
+  <div class="portfolio-grid">
+
+    <div class="portfolio-item reveal" data-work="0" onclick="openDetail(0)">
+      <div class="portfolio-thumb">
+        <div class="glass-panel gp-1">
+          <div class="cell" style="width:60%;height:50%;top:2%;left:20%"></div>
+          <div class="cell" style="width:35%;height:30%;top:2%;left:0%"></div>
+          <div class="cell" style="width:35%;height:30%;top:2%;right:0%"></div>
+          <div class="cell" style="width:45%;height:35%;top:52%;left:28%"></div>
+          <div class="cell" style="width:25%;height:25%;top:55%;left:5%"></div>
+          <div class="cell" style="width:25%;height:25%;top:55%;right:5%"></div>
+          <div class="cell" style="width:55%;height:22%;top:78%;left:23%"></div>
+          <div class="cell" style="width:20%;height:15%;top:15%;left:36%"></div>
+          <div class="cell" style="width:20%;height:15%;top:60%;left:36%"></div>
+          <div class="cell" style="width:15%;height:20%;top:40%;left:43%"></div>
+          <div class="lead" style="width:2px;height:100%;left:49.5%"></div>
+          <div class="lead" style="width:100%;height:2px;top:51%"></div>
+          <div class="lead" style="width:100%;height:2px;top:77%"></div>
+        </div>
+      </div>
+      <div class="portfolio-info">
+        <h3 class="portfolio-name">Le Souffle du Rhône</h3>
+        <p class="portfolio-meta">Église Saint-Nizier · 2019</p>
+      </div>
+    </div>
+
+    <div class="portfolio-item reveal reveal-delay-1" data-work="1" onclick="openDetail(1)">
+      <div class="portfolio-thumb">
+        <div class="glass-panel gp-2">
+          <div class="cell" style="width:55%;height:45%;top:5%;left:22%"></div>
+          <div class="cell" style="width:30%;height:25%;top:5%;left:0%"></div>
+          <div class="cell" style="width:30%;height:25%;top:5%;right:0%"></div>
+          <div class="cell" style="width:40%;height:30%;top:50%;left:30%"></div>
+          <div class="cell" style="width:25%;height:20%;top:52%;left:5%"></div>
+          <div class="cell" style="width:25%;height:20%;top:52%;right:5%"></div>
+          <div class="lead" style="width:2px;height:100%;left:49.5%"></div>
+          <div class="lead" style="width:100%;height:2px;top:49%"></div>
+          <div class="lead" style="width:100%;height:2px;top:74%"></div>
+        </div>
+      </div>
+      <div class="portfolio-info">
+        <h3 class="portfolio-name">Nuit Cévenole</h3>
+        <p class="portfolio-meta">Hôtel de Région · 2021</p>
+      </div>
+    </div>
+
+    <div class="portfolio-item reveal reveal-delay-2" data-work="2" onclick="openDetail(2)">
+      <div class="portfolio-thumb">
+        <div class="glass-panel gp-3">
+          <div class="cell" style="width:40%;height:35%;top:5%;left:30%"></div>
+          <div class="cell" style="width:25%;height:20%;top:5%;left:5%"></div>
+          <div class="cell" style="width:25%;height:20%;top:5%;right:5%"></div>
+          <div class="cell" style="width:50%;height:35%;top:40%;left:25%"></div>
+          <div class="cell" style="width:20%;height:25%;top:42%;left:5%"></div>
+          <div class="cell" style="width:20%;height:25%;top:42%;right:5%"></div>
+          <div class="cell" style="width:60%;height:25%;top:72%;left:20%"></div>
+          <div class="lead" style="width:2px;height:100%;left:49.5%"></div>
+          <div class="lead" style="width:100%;height:2px;top:39%"></div>
+          <div class="lead" style="width:100%;height:2px;top:71%"></div>
+        </div>
+      </div>
+      <div class="portfolio-info">
+        <h3 class="portfolio-name">Pavé de Lumière</h3>
+        <p class="portfolio-meta">Demeure privée · 2018</p>
+      </div>
+    </div>
+
+    <div class="portfolio-item reveal" data-work="3" onclick="openDetail(3)">
+      <div class="portfolio-thumb">
+        <div class="glass-panel gp-4">
+          <div class="cell" style="width:45%;height:30%;top:5%;left:28%"></div>
+          <div class="cell" style="width:25%;height:20%;top:5%;left:3%"></div>
+          <div class="cell" style="width:25%;height:20%;top:5%;right:3%"></div>
+          <div class="cell" style="width:35%;height:25%;top:35%;left:33%"></div>
+          <div class="cell" style="width:20%;height:30%;top:35%;left:5%"></div>
+          <div class="cell" style="width:20%;height:30%;top:35%;right:5%"></div>
+          <div class="cell" style="width:50%;height:20%;top:65%;left:25%"></div>
+          <div class="cell" style="width:30%;height:25%;top:80%;left:35%"></div>
+          <div class="lead" style="width:2px;height:100%;left:49.5%"></div>
+          <div class="lead" style="width:100%;height:2px;top:34%"></div>
+          <div class="lead" style="width:100%;height:2px;top:64%"></div>
+        </div>
+      </div>
+      <div class="portfolio-info">
+        <h3 class="portfolio-name">Les Saisons de Vienne</h3>
+        <p class="portfolio-meta">Musée Roman · 2020</p>
+      </div>
+    </div>
+
+    <div class="portfolio-item reveal reveal-delay-1" data-work="4" onclick="openDetail(4)">
+      <div class="portfolio-thumb">
+        <div class="glass-panel gp-5">
+          <div class="cell" style="width:50%;height:40%;top:8%;left:25%"></div>
+          <div class="cell" style="width:25%;height:20%;top:8%;left:0%"></div>
+          <div class="cell" style="width:25%;height:20%;top:8%;right:0%"></div>
+          <div class="cell" style="width:35%;height:30%;top:48%;left:33%"></div>
+          <div class="cell" style="width:20%;height:20%;top:50%;left:5%"></div>
+          <div class="cell" style="width:20%;height:20%;top:50%;right:5%"></div>
+          <div class="cell" style="width:45%;height:25%;top:75%;left:28%"></div>
+          <div class="lead" style="width:2px;height:100%;left:49.5%"></div>
+          <div class="lead" style="width:100%;height:2px;top:47%"></div>
+          <div class="lead" style="width:100%;height:2px;top:74%"></div>
+        </div>
+      </div>
+      <div class="portfolio-info">
+        <h3 class="portfolio-name">Fenêtre sur le Jardin Secret</h3>
+        <p class="portfolio-meta">Hôtel particulier · 2022</p>
+      </div>
+    </div>
+
+    <div class="portfolio-item reveal reveal-delay-2" data-work="5" onclick="openDetail(5)">
+      <div class="portfolio-thumb">
+        <div class="glass-panel gp-6">
+          <div class="cell" style="width:55%;height:35%;top:5%;left:22%"></div>
+          <div class="cell" style="width:23%;height:18%;top:5%;left:0%"></div>
+          <div class="cell" style="width:23%;height:18%;top:5%;right:0%"></div>
+          <div class="cell" style="width:40%;height:30%;top:40%;left:30%"></div>
+          <div class="cell" style="width:22%;height:22%;top:42%;left:3%"></div>
+          <div class="cell" style="width:22%;height:22%;top:42%;right:3%"></div>
+          <div class="cell" style="width:60%;height:25%;top:70%;left:20%"></div>
+          <div class="cell" style="width:25%;height:20%;top:72%;left:38%"></div>
+          <div class="lead" style="width:2px;height:100%;left:49.5%"></div>
+          <div class="lead" style="width:100%;height:2px;top:39%"></div>
+          <div class="lead" style="width:100%;height:2px;top:69%"></div>
+        </div>
+      </div>
+      <div class="portfolio-info">
+        <h3 class="portfolio-name">L'Aube sur les Croix-Rousse</h3>
+        <p class="portfolio-meta">La Surface · 2023</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- PORTFOLIO DETAIL OVERLAY -->
+<div class="portfolio-detail" id="portfolio-detail">
+  <button class="detail-close hoverable" onclick="closeDetail()">Fermer</button>
+  <div class="detail-content">
+    <div class="detail-art">
+      <div class="stained-glass" id="detail-artwork"></div>
+    </div>
+    <div class="detail-text">
+      <h2 id="detail-title"></h2>
+      <span class="year" id="detail-year"></span>
+      <p class="loc" id="detail-loc"></p>
+      <p id="detail-desc"></p>
+      <div class="specs" id="detail-specs"></div>
+    </div>
+  </div>
+</div>
+
+<div class="light-divider"></div>
+
+<!-- CONTACT -->
+<section id="contact">
+  <span class="section-number reveal">04</span>
+  <div class="section-label reveal">Contact</div>
+  <h2 class="section-heading reveal reveal-delay-1">Commençons<br>ensemble</h2>
+  <div class="contact-grid">
+    <div class="contact-text reveal reveal-delay-2">
+      <p>Chaque grande œuvre commence par une conversation. Nous recevons dans notre atelier de la rue Saint-Jean, où vous pourrez toucher le verre, voir comment la lumière traverse nos échantillons à différentes heures de la journée, et discuter de votre projet avec Élodie ou l'un de nos maîtres verriers.</p>
+      <p>Nous travaillons sur des projets dans le monde entier, mais chaque œuvre porte l'âme de Lyon — cette lumière particulière du confluent du Rhône et de la Saône que personne au monde ne peut reproduire.</p>
+      <div class="contact-details">
+        <div class="contact-row">
+          <span class="contact-label">Atelier</span>
+          <span class="contact-value">17 rue Saint-Jean<br>69005 Lyon, France</span>
+        </div>
+        <div class="contact-row">
+          <span class="contact-label">Contact</span>
+          <span class="contact-value">atelier@lumiere-atelier.fr<br>+33 (0)4 78 42 19 87</span>
+        </div>
+        <div class="contact-row">
+          <span class="contact-label">Visite</span>
+          <span class="contact-value">Sur rendez-vous uniquement<br>Mar – Sam, 10h – 18h</span>
+        </div>
+      </div>
+    </div>
+    <form class="contact-form reveal reveal-delay-3" onsubmit="event.preventDefault()">
+      <div class="form-group">
+        <input type="text" id="name" placeholder=" " required>
+        <label for="name">Nom complet</label>
+      </div>
+      <div class="form-group">
+        <input type="email" id="email" placeholder=" " required>
+        <label for="email">Adresse e-mail</label>
+      </div>
+      <div class="form-group">
+        <input type="text" id="subject" placeholder=" ">
+        <label for="subject">Projet</label>
+      </div>
+      <div class="form-group">
+        <textarea id="message" placeholder=" " required></textarea>
+        <label for="message">Votre message</label>
+      </div>
+      <button type="submit" class="submit-btn hoverable"><span>Envoyer la demande</span></button>
+    </form>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <span class="footer-text">© 2024 Lumière Atelier — Tous droits réservés</span>
+  <a href="#hero" class="footer-back hoverable">Retour en haut ↑</a>
+</footer>
+
+<!-- THREE.JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ═══════════════════════════════════════
+// STAINED GLASS DATA — 6 WORKS
+// ═══════════════════════════════════════
+const works = [
+  {
+    name:"Le Souffle du Rhône", year:"2019", loc:"Église Saint-Nizier, Lyon",
+    desc:"Vitrail monumental de douze mètres carrés suspendu dans le chœur de Saint-Nizier, cette œuvre capture le mouvement perpétuel du Rhône tel qu'on le voyait depuis le quai Saint-Antoine au seizième siècle. Les bleus profonds du fleuve se brisent en rubis et or lorsque le soleil d'automne traverse la verrière, projetant au sol une cartographie liquide qui migre d'un mur à l'autre au fil des heures.\n\nLa composition est structurée en trois registres superposés — la montagne lointaine, la ville moyennante, le fleuve ante — chaque plan utilisant une épaisseur de verre différente pour créer une profondeur optique qui défie la perspective linéaire traditionnelle.",
+    specs:[["Matériaux","Verre cannelé de Mosserbach, plomb au zinc"],["Dimensions","3,20m × 3,75m"],["Technique","Vitrail polychrome à décor fluide"],["Durée","14 mois"]]
+  },
+  {
+    name:"Nuit Cévenole", year:"2021", loc:"Hôtel de Région, Lyon",
+    desc:"Commandé pour la cage d'escalier principale de l'Hôtel de Région, ce vitrail de sept mètres de hauteur transforme la circulation verticale en un parcours lumineux. La palette — bleus nocturnes, ardoises, et rares touches d'or — évoque les Cévennes après la tombée de la nuit, lorsque les étoiles semblent si proches qu'on pourrait les compter une à une.\n\nChaque marche est éclairée par une frise de vitrail millimétrée dont la densité chromatique augmente progressivement, créant l'illusion que l'on monte vers la lumière à mesure que l'on gravit les étages.",
+    specs:[["Matériaux","Verre plaqué d'orfèvre, cristal de Bohême"],["Dimensions","1,50m × 7,00m"],["Technique","Vitrail à frise continue"],["Durée","10 mois"]]
+  },
+  {
+    name:"Pavé de Lumière", year:"2018", loc:"Demeure privée, Gorges du Loiret",
+    desc:"Toiture vitrée de quarante-huit panneaux pour le pavillon de réception d'une demeure privée. Chaque panneau est un carré de verre argenté coulé, dont la teinte — du jaune pâle au citrine profond — varie selon un gradient calculé pour reproduire, à chaque heure du jour, la qualité chromatique caractéristique de la lumière méridionale.\n\nLa structure porteuse en chêne massif est assemblée sans un seul clou, aux techniques du menuisier d'art du dix-huitième siècle.",
+    specs:[["Matériaux","Verre argenté coulé, chêne centenaire"],["Dimensions","4,80m × 3,60m (48 panneaux)"],["Technique","Toiture vitrée à panneau unitaire"],["Durée","18 mois"]]
+  },
+  {
+    name:"Les Saisons de Vienne", year:"2020", loc:"Musée Roman, Vienne",
+    desc:"Série de quatre vitraux rectangulaires destinée à la galerie nord du musée Roman. Chaque panneau représente une saison telle qu'on la vivait dans la plaine de la Saône au temps de l'Antiquité gallo-romaine — une interprétation qui refuse les clichés pour aller à l'essence chromatique de chaque période.\n\nLe printemps est un vert qui n'existe nulle part ailleurs, obtenu par un mélange de cuivre et d'oxyde de chrome que notre atelier a redécouvert dans les formulaires de la verrerie de Champigneulles. L'été est un or presque violent. L'automne est un rubis. L'hiver est un blanc qui n'est pas l'absence de couleur, mais sa plénitude.",
+    specs:[["Matériaux","Verre à laapatte, argent canting, plomb"],["Dimensions","4 × 2,00m × 2,80m"],["Technique","Vitrail polychrome historié"],["Durée","22 mois"]]
+  },
+  {
+    name:"Fenêtre sur le Jardin Secret", year:"2022", loc:"Hôtel particulier, 5e arr.",
+    desc:"Écran vitré coulissant de six panneaux séparant le salon d'un jardin intérieur caché au cœur d'un hôtel particulier du quinzième arrondissement. Le dispositif permet de调节 la densité lumineuse du salon continûment, de la transparence totale à la complète opacité chromatique.\n\nLes panneaux, une fois déployés, forment une composition unifiée : une perspective de cyprès stylisés dont les cimes se confondent avec un ciel traversé par des nuages peints au pinceau, technique de peinture au verre du seiziÃ¨me siÃ¨cle.",
+    specs:[["Matériaux","Verre émaillé, verre peint, acier patiné"],["Dimensions","6 × 1,20m × 2,40m"],["Technique","Écran coulissant à panneaux unitaires"],["Durée","12 mois"]]
+  },
+  {
+    name:"L'Aube sur les Croix-Rousse", year:"2023", loc:"La Surface, Lyon",
+    desc:"Façade-lanterne de quinze mètres carrés pour le Centre de Création Contemporaine La Surface, au pied de la butte des Croix-Rousse. Cette verrière architecturale baigne les sept cents mètres carrés d'exposition d'une lumière jaune d'or dont la saturation varie avec l'angle du soleil, créant dans l'espace intérieur une expérience chromatique qui change d'une minute à l'autre.\n\nLe projet a nécessité la collaboration avec l'architecte Patrick Bouchain pour intégrer la structure porteuse — treize poutres de chêne croisées, formant un treillis qui sert en même temps de châssis aux soixante-deux panneaux de vitrail.",
+    specs:[["Matériaux","Verre fluide de Saint-Gobain, chêne"],["Dimensions","5,40m × 2,80m (62 panneaux)"],["Technique","Façade-lanterne vitrée"],["Durée","20 mois"]]
+  }
+];
+
+// ═══════════════════════════════════════
+// CURSOR
+// ═══════════════════════════════════════
+const cursor=document.getElementById('cursor');
+const dot=document.getElementById('cursor-dot');
+const glow=document.getElementById('cursor-glow');
+let mx=0,my=0,cx=0,cy=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cursor.style.left=mx+'px';dot.style.left=mx+'px';cursor.style.top=my+'px';dot.style.top=my+'px';glow.style.left=mx+'px';glow.style.top=my+'px'});
+document.querySelectorAll('.hoverable,a,.portfolio-item,.submit-btn,.detail-close').forEach(el=>{
+  el.addEventListener('mouseenter',()=>cursor.classList.add('hover'));
+  el.addEventListener('mouseleave',()=>cursor.classList.remove('hover'));
+});
+
+// ═══════════════════════════════════════
+// NAV SCROLL
+// ═══════════════════════════════════════
+const nav=document.getElementById('nav');
+window.addEventListener('scroll',()=>{nav.classList.toggle('scrolled',window.scrollY>100)});
+
+// ═══════════════════════════════════════
+// REVEAL ON SCROLL
+// ═══════════════════════════════════════
+const observer=new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');observer.unobserve(e.target)}});
+},{threshold:0.1,rootMargin:'0px 0px -50px 0px'});
+document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
+
+// ═══════════════════════════════════════
+// DUST PARTICLES
+// ═══════════════════════════════════════
+const dust=document.getElementById('dust');
+for(let i=0;i<30;i++){
+  const p=document.createElement('div');
+  p.className='dust-particle';
+  p.style.left=Math.random()*100+'%';
+  p.style.animationDuration=(15+Math.random()*25)+'s';
+  p.style.animationDelay=(-Math.random()*40)+'s';
+  p.style.opacity=0.1+Math.random()*0.2;
+  p.style.width=p.style.height=(1+Math.random()*2)+'px';
+  dust.appendChild(p);
+}
+
+// ═══════════════════════════════════════
+// PORTFOLIO DETAIL
+// ═══════════════════════════════════════
+const overlay=document.getElementById('portfolio-detail');
+const detailArt=document.getElementById('detail-artwork');
+const detailTitle=document.getElementById('detail-title');
+const detailYear=document.getElementById('detail-year');
+const detailLoc=document.getElementById('detail-loc');
+const detailDesc=document.getElementById('detail-desc');
+const detailSpecs=document.getElementById('detail-specs');
+
+function openDetail(i){
+  const w=works[i];
+  detailTitle.textContent=w.name;
+  detailYear.textContent=w.year;
+  detailLoc.textContent=w.loc;
+  detailDesc.innerHTML=w.desc.replace(/\n\n/g,'</p><p style="margin-top:1.5rem">');
+  detailArt.className='stained-glass gp-'+(i+1);
+  // Copy structure from portfolio
+  const thumb=document.querySelectorAll('.portfolio-item')[i].querySelector('.glass-panel');
+  detailArt.innerHTML=thumb.innerHTML;
+  detailSpecs.innerHTML=w.specs.map(([l,v])=>`<span>${l}</span><strong>${v}</strong>`).join('');
+  overlay.classList.add('active');
+  document.body.style.overflow='hidden';
+}
+function closeDetail(){
+  overlay.classList.remove('active');
+  document.body.style.overflow='';
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDetail()});
+
+// ═══════════════════════════════════════
+// THREE.JS STAINED GLASS HERO
+// ═══════════════════════════════════════
+(function(){
+  const canvas=document.getElementById('hero-canvas');
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  function resize(){
+    const dpr=Math.min(window.devicePixelRatio,2);
+    renderer.setSize(window.innerWidth,window.innerHeight);
+    renderer.setPixelRatio(dpr);
+  }
+  resize();
+  window.addEventListener('resize',resize);
+
+  const scene=new THREE.Scene();
+  const camera=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+
+  const uniforms={
+    uTime:{value:0},
+    uScroll:{value:0},
+    uMouse:{value:new THREE.Vector2(0.5,0.5)},
+    uRes:{value:new THREE.Vector2(window.innerWidth,window.innerHeight)}
+  };
+
+  const geo=new THREE.PlaneGeometry(2,2);
+  const mat=new THREE.ShaderMaterial({
+    uniforms,
+    vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position,1.0);}`,
+    fragmentShader:`
+      precision highp float;
+      uniform float uTime;
+      uniform float uScroll;
+      uniform vec2 uMouse;
+      uniform vec2 uRes;
+      varying vec2 vUv;
+
+      float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+      float hash2(vec2 p){return fract(sin(dot(p,vec2(269.5,183.3)))*43758.5453);}
+
+      float cellNoise(vec2 p){
+        vec2 n=floor(p);
+        vec2 f=fract(p);
+        float d=1.0;
+        for(int j=-1;j<=1;j++)
+        for(int i=-1;i<=1;i++){
+          vec2 g=vec2(float(i),float(j));
+          vec2 o=vec2(hash(n+g),hash2(n+g));
+          o=0.5+0.5*sin(uTime*0.25+6.2831*o);
+          float dd=length(g+o-f);
+          if(dd<d) d=dd;
+        }
+        return d;
+      }
+
+      vec3 jewelColor(vec2 p){
+        float h=hash(floor(p*3.0));
+        float h2=hash2(floor(p*5.0));
+        if(h<0.16) return 0.5+0.5*cos(6.28*(p+vec3(0.0,0.1,0.2)));
+        if(h<0.32) return 0.5+0.5*cos(6.28*(p+vec3(0.3,0.2,0.0)));
+        if(h<0.48) return 0.5+0.5*cos(6.28*(p+vec3(0.1,0.5,0.3)));
+        if(h<0.64) return 0.5+0.5*cos(6.28*(p+vec3(0.7,0.3,0.5)));
+        if(h<0.80) return 0.5+0.5*cos(6.28*(p+vec3(0.9,0.4,0.1)));
+        return 0.5+0.5*cos(6.28*(p+vec3(0.5,0.6,0.0)));
+      }
+
+      void main(){
+        vec2 uv=vUv;
+        vec2 aspect=vec2(uRes.x/uRes.y,1.0);
+        vec2 p=uv*aspect*6.0;
+
+        vec2 mouse=vec2(uMouse.x,uMouse.y);
+        float mouseDist=length((uv-mouse)*aspect);
+
+        float cell=cellNoise(p);
+        vec3 col=jewelColor(floor(p));
+
+        vec3 darkCol=jewelColor(floor(p)+vec2(0.3,0.7));
+        col=mix(darkCol,col,smoothstep(0.55,0.45,cell));
+
+        float edge=smoothstep(0.04,0.0,cell);
+        vec3 leadCol=vec3(0.08,0.08,0.12);
+        col=mix(leadCol,col,1.0-edge);
+
+        float beam=sin(uv.x*18.0+uTime*0.4)*sin(uv.y*14.0-uTime*0.3)*0.5+0.5;
+        col*=0.4+beam*0.6;
+
+        float glow=exp(-mouseDist*2.5)*0.4;
+        col+=glow*col;
+
+        float scrollBright=uScroll*0.3;
+        col*=0.6+scrollBright+smoothstep(0.5,0.3,cell)*0.5;
+
+        float vig=1.0-length(uv-0.5)*0.6;
+        col*=vig;
+
+        float grain=hash(uv*uRes*0.05+uTime)*0.02;
+        col+=grain-0.01;
+
+        col=pow(col,vec3(0.92));
+
+        gl_FragColor=vec4(col,1.0);
+      }
+    `
+  });
+
+  scene.add(new THREE.Mesh(geo,mat));
+
+  let scrollY=0;
+  let mousex=0.5,mousey=0.5;
+  window.addEventListener('scroll',()=>{scrollY=window.scrollY/window.innerHeight});
+  window.addEventListener('mousemove',e=>{mousex=e.clientX/window.innerWidth;mousey=1.0-e.clientY/window.innerHeight});
+
+  (function animate(t){
+    uniforms.uTime.value=t*0.001;
+    uniforms.uScroll.value=scrollY;
+    uniforms.uMouse.value.set(mousex,mousey);
+    renderer.render(scene,camera);
+    requestAnimationFrame(animate);
+  })();
+
+  window.addEventListener('resize',()=>{
+    uniforms.uRes.value.set(window.innerWidth,window.innerHeight);
+    resize();
+  });
+})();
+
+// ═══════════════════════════════════════
+// SMOOTH SCROLL FOR ANCHOR LINKS
+// ═══════════════════════════════════════
+document.querySelectorAll('a[href^="#"]').forEach(a=>{
+  a.addEventListener('click',e=>{
+    e.preventDefault();
+    const target=document.querySelector(a.getAttribute('href'));
+    if(target) target.scrollIntoView({behavior:'smooth'});
+  });
+});
+</script>
+</body>
+</html>

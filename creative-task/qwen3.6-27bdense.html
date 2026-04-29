@@ -1,0 +1,1492 @@
+<!-- 
+Qwen3.6 27b unsloth
+37078 tokens
+127 t/s prompt processing / 12.1 t/s generation
+Very impressive design, oneshotted it with no bugs, site is coherent, it's also very believable from every point of view. No AI slop or gibberish. 
+The curated selection is again quite exquisite, love the designs and the animations. Really great job considering it used no images. 
+The wording and the sales pitch is suitable for such an exquisite atelier, it captured the tone very well. 
+Also, the way it created the rosette design with a sun behind it and the light is following the mouse, it's very special. The mouse is not a classic cursor either, its a mini spec of light. 
+No issues with links or any other website functionality. 
+1481 lines of code
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lumière Atelier — Bespoke Stained Glass, Lyon</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Jost:wght@200;300;400&display=swap');
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --gold: #c9a84c;
+  --gold-light: #e8d5a3;
+  --noir: #0a0808;
+  --noir-warm: #1a1410;
+  --cream: #f5efe6;
+  --crimson: #8b1a2b;
+  --cobalt: #1a3a6b;
+  --emerald: #1a5a3b;
+  --amethyst: #5a1a6b;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--noir);
+  color: var(--cream);
+  font-family: 'Jost', sans-serif;
+  font-weight: 300;
+  overflow-x: hidden;
+  cursor: none;
+}
+
+/* Custom Cursor */
+#cursor {
+  position: fixed;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 10000;
+  mix-blend-mode: screen;
+  transition: transform 0.15s ease-out;
+  will-change: transform;
+}
+
+#cursor-glow {
+  position: fixed;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  mix-blend-mode: screen;
+  opacity: 0.3;
+  filter: blur(40px);
+  transition: all 0.4s ease-out;
+  will-change: transform;
+}
+
+/* Navigation */
+#nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  padding: 28px 48px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  mix-blend-mode: difference;
+}
+
+#nav .logo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 18px;
+  font-weight: 300;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--cream);
+}
+
+#nav .nav-links {
+  display: flex;
+  gap: 36px;
+  list-style: none;
+}
+
+#nav .nav-links a {
+  color: var(--cream);
+  text-decoration: none;
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  font-weight: 200;
+  position: relative;
+  padding-bottom: 4px;
+}
+
+#nav .nav-links a::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: var(--gold);
+  transition: width 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+#nav .nav-links a:hover::after { width: 100%; }
+
+/* Hero Canvas */
+#hero-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+/* Sections */
+section {
+  position: relative;
+  z-index: 1;
+}
+
+/* Hero */
+#hero {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  position: relative;
+}
+
+#hero h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(48px, 8vw, 120px);
+  font-weight: 300;
+  letter-spacing: 12px;
+  text-transform: uppercase;
+  line-height: 1.1;
+  opacity: 0;
+  animation: heroReveal 2s cubic-bezier(0.25, 0.1, 0.25, 1) 0.5s forwards;
+}
+
+#hero .subtitle {
+  font-size: 12px;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  font-weight: 200;
+  margin-top: 24px;
+  color: var(--gold-light);
+  opacity: 0;
+  animation: heroReveal 2s cubic-bezier(0.25, 0.1, 0.25, 1) 1s forwards;
+}
+
+#hero .scroll-indicator {
+  position: absolute;
+  bottom: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  opacity: 0;
+  animation: heroReveal 2s cubic-bezier(0.25, 0.1, 0.25, 1) 1.5s forwards;
+}
+
+#hero .scroll-indicator span {
+  font-size: 9px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--gold-light);
+}
+
+#hero .scroll-line {
+  width: 1px;
+  height: 60px;
+  background: linear-gradient(to bottom, var(--gold), transparent);
+  animation: scrollPulse 2s ease-in-out infinite;
+}
+
+@keyframes heroReveal {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scrollPulse {
+  0%, 100% { opacity: 0.3; transform: scaleY(0.6); }
+  50% { opacity: 1; transform: scaleY(1); }
+}
+
+/* Story Section */
+#story {
+  min-height: 100vh;
+  padding: 160px 48px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 120px;
+  align-items: center;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+#story .story-left { position: relative; }
+
+#story h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(36px, 4vw, 64px);
+  font-weight: 300;
+  line-height: 1.15;
+  margin-bottom: 48px;
+}
+
+#story h2 em {
+  font-style: italic;
+  color: var(--gold);
+}
+
+#story .story-text {
+  font-size: 15px;
+  line-height: 2;
+  font-weight: 200;
+  color: rgba(245, 239, 230, 0.7);
+  max-width: 480px;
+}
+
+#story .story-text p + p { margin-top: 24px; }
+
+#story .story-divider {
+  width: 48px;
+  height: 1px;
+  background: var(--gold);
+  margin: 40px 0;
+}
+
+#story .story-right {
+  position: relative;
+  height: 600px;
+}
+
+#story-canvas {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+/* Process Section */
+#process {
+  min-height: 100vh;
+  padding: 160px 48px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+#process .section-header {
+  text-align: center;
+  margin-bottom: 120px;
+}
+
+#process h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(36px, 4vw, 64px);
+  font-weight: 300;
+}
+
+#process .section-subtitle {
+  font-size: 11px;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-top: 16px;
+  font-weight: 200;
+}
+
+.process-steps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 48px;
+  position: relative;
+}
+
+.process-steps::before {
+  content: '';
+  position: absolute;
+  top: 32px;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--gold), transparent);
+  opacity: 0.3;
+}
+
+.process-step {
+  text-align: center;
+  position: relative;
+  padding-top: 64px;
+}
+
+.step-number {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 24px;
+  color: var(--gold);
+}
+
+.step-number::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--gold);
+  transform: rotate(45deg);
+  opacity: 0.4;
+}
+
+.process-step h3 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px;
+  font-weight: 400;
+  margin-bottom: 16px;
+  letter-spacing: 1px;
+}
+
+.process-step p {
+  font-size: 13px;
+  line-height: 1.9;
+  font-weight: 200;
+  color: rgba(245, 239, 230, 0.55);
+  max-width: 240px;
+  margin: 0 auto;
+}
+
+/* Portfolio */
+#portfolio {
+  min-height: 100vh;
+  padding: 160px 48px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+#portfolio .section-header {
+  text-align: center;
+  margin-bottom: 100px;
+}
+
+#portfolio h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(36px, 4vw, 64px);
+  font-weight: 300;
+}
+
+.portfolio-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+}
+
+.portfolio-item {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 3/4;
+  cursor: none;
+}
+
+.portfolio-item canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.portfolio-item .overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(10,8,8,0.95) 0%, rgba(10,8,8,0.3) 40%, transparent 70%);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 32px;
+  opacity: 0;
+  transition: opacity 0.8s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.portfolio-item:hover .overlay { opacity: 1; }
+
+.portfolio-item .overlay h3 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 24px;
+  font-weight: 400;
+  margin-bottom: 8px;
+  transform: translateY(20px);
+  transition: transform 0.8s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.portfolio-item:hover .overlay h3 { transform: translateY(0); }
+
+.portfolio-item .overlay .location {
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--gold);
+  font-weight: 200;
+  transform: translateY(20px);
+  transition: transform 0.8s cubic-bezier(0.25, 0.1, 0.25, 1) 0.05s;
+}
+
+.portfolio-item:hover .overlay .location { transform: translateY(0); }
+
+.portfolio-item .overlay .desc {
+  font-size: 13px;
+  line-height: 1.8;
+  color: rgba(245,239,230,0.5);
+  margin-top: 12px;
+  font-weight: 200;
+  transform: translateY(20px);
+  transition: transform 0.8s cubic-bezier(0.25, 0.1, 0.25, 1) 0.1s;
+}
+
+.portfolio-item:hover .overlay .desc { transform: translateY(0); }
+
+.portfolio-item .edge-glow {
+  position: absolute;
+  inset: 0;
+  border: 1px solid transparent;
+  transition: border-color 0.6s ease;
+  pointer-events: none;
+}
+
+.portfolio-item:hover .edge-glow {
+  border-color: var(--gold);
+  opacity: 0.3;
+}
+
+/* Contact */
+#contact {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 160px 48px;
+  position: relative;
+}
+
+#contact::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1px;
+  height: 120px;
+  background: linear-gradient(to bottom, transparent, var(--gold));
+  opacity: 0.3;
+}
+
+#contact h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(36px, 5vw, 80px);
+  font-weight: 300;
+  margin-bottom: 32px;
+}
+
+#contact h2 em {
+  font-style: italic;
+  color: var(--gold);
+}
+
+#contact .contact-text {
+  font-size: 15px;
+  line-height: 2;
+  color: rgba(245, 239, 230, 0.6);
+  max-width: 520px;
+  margin: 0 auto 48px;
+  font-weight: 200;
+}
+
+#contact a {
+  color: var(--gold);
+  text-decoration: none;
+  position: relative;
+}
+
+#contact a::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: var(--gold);
+  transform: scaleX(0);
+  transition: transform 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);
+  transform-origin: right;
+}
+
+#contact a:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+.contact-details {
+  display: flex;
+  gap: 64px;
+  justify-content: center;
+  margin-top: 64px;
+}
+
+.contact-details .detail {
+  text-align: center;
+}
+
+.contact-details .detail-label {
+  font-size: 9px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 12px;
+  font-weight: 200;
+}
+
+.contact-details .detail-value {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 18px;
+  font-weight: 300;
+  color: var(--cream);
+}
+
+/* Footer */
+#footer {
+  padding: 48px;
+  text-align: center;
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: rgba(245, 239, 230, 0.25);
+  font-weight: 200;
+  border-top: 1px solid rgba(201, 168, 76, 0.1);
+}
+
+/* Reveal Animations */
+.reveal {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 1.2s cubic-bezier(0.25, 0.1, 0.25, 1),
+              transform 1.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Caustic overlay */
+#caustic-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.04;
+  mix-blend-mode: screen;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  #story { grid-template-columns: 1fr; gap: 64px; }
+  .process-steps { grid-template-columns: repeat(2, 1fr); }
+  .portfolio-grid { grid-template-columns: repeat(2, 1fr); }
+  .contact-details { flex-direction: column; gap: 32px; }
+}
+
+@media (max-width: 640px) {
+  #nav { padding: 20px 24px; }
+  #nav .nav-links { display: none; }
+  section { padding-left: 24px !important; padding-right: 24px !important; }
+  .process-steps { grid-template-columns: 1fr; }
+  .portfolio-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div id="cursor"></div>
+<div id="cursor-glow"></div>
+
+<canvas id="caustic-overlay"></canvas>
+
+<nav id="nav">
+  <div class="logo">Lumière Atelier</div>
+  <ul class="nav-links">
+    <li><a href="#story">Atelier</a></li>
+    <li><a href="#process">Process</a></li>
+    <li><a href="#portfolio">Oeuvres</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+</nav>
+
+<canvas id="hero-canvas"></canvas>
+
+<section id="hero">
+  <h1>Lumière<br>Atelier</h1>
+  <div class="subtitle">Stained Glass Architecture — Lyon, France</div>
+  <div class="scroll-indicator">
+    <span>Découvrir</span>
+    <div class="scroll-line"></div>
+  </div>
+</section>
+
+<section id="story">
+  <div class="story-left reveal">
+    <h2>Where Light Becomes <em>Sacred Architecture</em></h2>
+    <div class="story-divider"></div>
+    <div class="story-text">
+      <p>Founded in 1987 beneath the vaulted arches of a converted Lyon tannery, Lumière Atelier exists at the singular intersection of medieval craft and contemporary vision. Our atelier does not merely fabricate stained glass; it composes with light itself, transmuting raw silica and mineral pigments into architectural instruments of illumination.</p>
+      <p>Each commission begins as a dialogue between the architect's intent and the material's ancient memory. We work exclusively with hand-blown antique glass, Kiln-fired dichroic surfaces, and custom-parements ground from oxides we source from a single atelier in Murano. The result is glass that breathes differently at dawn than at dusk — living, breathing architecture that rewrites itself with the passage of the sun.</p>
+      <p>Our pieces reside in private chapels on Saint-Tropez, in the atrium of a museum in Doha, and in homes across three continents. Every pane carries the maker's hand. Every composition is singular. Nothing is repeated. Nothing is ordinary.</p>
+    </div>
+  </div>
+  <div class="story-right reveal">
+    <canvas id="story-canvas"></canvas>
+  </div>
+</section>
+
+<section id="process">
+  <div class="section-header reveal">
+    <h2>The Commission</h2>
+    <div class="section-subtitle">From First Light to Final Revelation</div>
+  </div>
+  <div class="process-steps">
+    <div class="process-step reveal">
+      <div class="step-number">I</div>
+      <h3>Conversation</h3>
+      <p>We begin with an extended dialogue — understanding the architecture, the quality of light, the emotional resonance you seek. A site visit is not optional; it is essential. Light must be witnessed, not imagined.</p>
+    </div>
+    <div class="process-step reveal">
+      <div class="step-number">II</div>
+      <h3>Cartoon</h3>
+      <p>Our designers produce full-scale cartoons — precise drawings on primed canvas. You will see exactly how light will fall, how color will shift through the hours. Revisions continue until the vision is absolute.</p>
+    </div>
+    <div class="process-step reveal">
+      <div class="step-number">III</div>
+      <h3>Realisation</h3>
+      <p>Each piece of glass is cut, bevelled, and assembled by hand — a process measured in weeks, not days. Copper foil or lead came, fired patina, hand-polished joints. No machine touches the final work.</p>
+    </div>
+    <div class="process-step reveal">
+      <div class="step-number">IV</div>
+      <h3>Installation</h3>
+      <p>Our master installers travel to your site. Every panel is fitted, sealed, and calibrated on location. We do not depart until the light sings precisely as we composed it.</p>
+    </div>
+  </div>
+</section>
+
+<section id="portfolio">
+  <div class="section-header reveal">
+    <h2>Selected Oeuvres</h2>
+    <div class="section-subtitle">A Curated Selection of Realised Commissions</div>
+  </div>
+  <div class="portfolio-grid" id="portfolio-grid"></div>
+</section>
+
+<section id="contact">
+  <div class="reveal">
+    <h2>Begin a <em>Conversation</em></h2>
+    <div class="contact-text">
+      <p>We accept a limited number of commissions each year to preserve the integrity of our craft. If you envision light as architecture, we invite you to reach out. Every masterpiece begins with a single conversation.</p>
+    </div>
+    <div class="contact-details">
+      <div class="detail">
+        <div class="detail-label">Atelier</div>
+        <div class="detail-value">14 Rue du Bataillon Doyen<br>69001 Lyon, France</div>
+      </div>
+      <div class="detail">
+        <div class="detail-label">Correspondence</div>
+        <div class="detail-value"><a href="mailto:atelier@lumiere-atelier.fr">atelier@lumiere-atelier.fr</a></div>
+      </div>
+      <div class="detail">
+        <div class="detail-label">Telephone</div>
+        <div class="detail-value">+33 4 72 00 00 00</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer id="footer">
+  <p>© 2024 Lumière Atelier — All Rights Reserved</p>
+</footer>
+
+<script>
+// ─── Cursor ───
+const cursor = document.getElementById('cursor');
+const cursorGlow = document.getElementById('cursor-glow');
+let mouseX = 0, mouseY = 0;
+let cursorX = 0, cursorY = 0;
+
+document.addEventListener('mousemove', e => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+});
+
+function updateCursor() {
+  cursorX += (mouseX - cursorX) * 0.15;
+  cursorY += (mouseY - cursorY) * 0.15;
+  cursor.style.left = cursorX - 10 + 'px';
+  cursor.style.top = cursorY - 10 + 'px';
+  cursorGlow.style.left = cursorX - 60 + 'px';
+  cursorGlow.style.top = cursorY - 60 + 'px';
+  requestAnimationFrame(updateCursor);
+}
+updateCursor();
+
+// ─── Hero Three.js Scene ───
+(function() {
+  const canvas = document.getElementById('hero-canvas');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+  camera.position.z = 8;
+
+  // Create stained glass shards
+  const glassColors = [
+    new THREE.Color('#8b1a2b'),
+    new THREE.Color('#1a3a6b'),
+    new THREE.Color('#1a5a3b'),
+    new THREE.Color('#5a1a6b'),
+    new THREE.Color('#6b4a1a'),
+    new THREE.Color('#2b4a6b'),
+    new THREE.Color('#4a1a3b'),
+    new THREE.Color('#1a6b5a'),
+    new THREE.Color('#6b1a2b'),
+    new THREE.Color('#3b1a6b'),
+    new THREE.Color('#6b5a1a'),
+    new THREE.Color('#1a2b6b'),
+  ];
+
+  const shards = [];
+  const shardGroup = new THREE.Group();
+
+  // Create organic shard geometry using Voronoi-inspired shapes
+  function createShardGeometry(verts) {
+    const shape = new THREE.Shape();
+    if (verts.length < 3) return null;
+    shape.moveTo(verts[0][0], verts[0][1]);
+    for (let i = 1; i < verts.length; i++) {
+      // Add slight curve for organic feel
+      const prev = verts[(i - 1 + verts.length) % verts.length];
+      const curr = verts[i];
+      const cpx = (prev[0] + curr[0]) / 2 + (Math.random() - 0.5) * 0.05;
+      const cpy = (prev[1] + curr[1]) / 2 + (Math.random() - 0.5) * 0.05;
+      shape.quadraticCurveTo(cpx, cpy, curr[0], curr[1]);
+    }
+    shape.closePath();
+    return new THREE.ShapeGeometry(shape);
+  }
+
+  // Generate shards in a circular window pattern
+  const numRings = 5;
+  const shardsPerRing = [6, 10, 14, 18, 22];
+  const ringRadii = [0.5, 1.2, 2.0, 2.9, 3.8];
+
+  shardsPerRing.forEach((count, ringIdx) => {
+    const r = ringRadii[ringIdx];
+    const rNext = ringIdx < numRings - 1 ? ringRadii[ringIdx + 1] : r + 1;
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2 + (ringIdx % 2) * (Math.PI / count);
+      const angleNext = ((i + 1) / count) * Math.PI * 2 + (ringIdx % 2) * (Math.PI / count);
+
+      const jitter = () => (Math.random() - 0.5) * 0.15;
+
+      const verts = [
+        [Math.cos(angle) * r + jitter(), Math.sin(angle) * r + jitter()],
+        [Math.cos(angle) * rNext + jitter(), Math.sin(angle) * rNext + jitter()],
+        [Math.cos(angleNext) * rNext + jitter(), Math.sin(angleNext) * rNext + jitter()],
+        [Math.cos(angleNext) * r + jitter(), Math.sin(angleNext) * r + jitter()],
+      ];
+
+      const geom = createShardGeometry(verts);
+      if (!geom) continue;
+
+      const color = glassColors[Math.floor(Math.random() * glassColors.length)];
+      const mat = new THREE.MeshPhysicalMaterial({
+        color: color,
+        transparent: true,
+        opacity: 0.75 + Math.random() * 0.2,
+        roughness: 0.1,
+        metalness: 0.05,
+        transmission: 0.3,
+        thickness: 0.5,
+        side: THREE.DoubleSide,
+        emissive: color.clone().multiplyScalar(0.15),
+        emissiveIntensity: 0.5 + Math.random() * 0.5,
+      });
+
+      const mesh = new THREE.Mesh(geom, mat);
+      mesh.userData = {
+        originalZ: (Math.random() - 0.5) * 0.5,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.3 + Math.random() * 0.7,
+        color: color,
+        originalOpacity: mat.opacity,
+      };
+      shardGroup.add(mesh);
+      shards.push(mesh);
+    }
+  });
+
+  // Central rosette
+  for (let i = 0; i < 12; i++) {
+    const angle = (i / 12) * Math.PI * 2;
+    const verts = [
+      [0, 0],
+      [Math.cos(angle - 0.15) * 0.5, Math.sin(angle - 0.15) * 0.5],
+      [Math.cos(angle) * 0.8, Math.sin(angle) * 0.8],
+      [Math.cos(angle + 0.15) * 0.5, Math.sin(angle + 0.15) * 0.5],
+    ];
+    const geom = createShardGeometry(verts);
+    const color = glassColors[Math.floor(Math.random() * glassColors.length)];
+    const mat = new THREE.MeshPhysicalMaterial({
+      color: color,
+      transparent: true,
+      opacity: 0.85,
+      roughness: 0.05,
+      metalness: 0.1,
+      side: THREE.DoubleSide,
+      emissive: color.clone().multiplyScalar(0.3),
+      emissiveIntensity: 0.8,
+    });
+    const mesh = new THREE.Mesh(geom, mat);
+    mesh.userData = {
+      originalZ: 0.3,
+      phase: Math.random() * Math.PI * 2,
+      speed: 0.5,
+      color: color,
+      originalOpacity: 0.85,
+    };
+    shardGroup.add(mesh);
+    shards.push(mesh);
+  }
+
+  // Lead lines (came)
+  const leadMat = new THREE.MeshBasicMaterial({ color: 0x1a1a1a });
+  const leadGroup = new THREE.Group();
+
+  // Radial lead lines
+  for (let i = 0; i < 12; i++) {
+    const angle = (i / 12) * Math.PI * 2;
+    const points = [
+      new THREE.Vector3(0, 0, -0.01),
+      new THREE.Vector3(Math.cos(angle) * 4.2, Math.sin(angle) * 4.2, -0.01),
+    ];
+    const geom = new THREE.BufferGeometry().setFromPoints(points);
+    const line = new THREE.Line(geom, new THREE.LineBasicMaterial({ color: 0x2a2520 }));
+    leadGroup.add(line);
+  }
+
+  // Circular lead lines
+  for (let r of ringRadii) {
+    const curve = new THREE.EllipseCurve(0, 0, r, r, 0, Math.PI * 2, false, 0);
+    const pts = curve.getPoints(64);
+    const geom = new THREE.BufferGeometry().setFromPoints(pts.map(p => new THREE.Vector3(p.x, p.y, -0.01)));
+    const line = new THREE.Line(geom, new THREE.LineBasicMaterial({ color: 0x2a2520 }));
+    leadGroup.add(line);
+  }
+
+  // Outer frame
+  const frameCurve = new THREE.EllipseCurve(0, 0, 4.3, 4.3, 0, Math.PI * 2, false, 0);
+  const framePts = frameCurve.getPoints(128);
+  const frameGeom = new THREE.BufferGeometry().setFromPoints(framePts.map(p => new THREE.Vector3(p.x, p.y, -0.02)));
+  const frame = new THREE.Line(frameGeom, new THREE.LineBasicMaterial({ color: 0x3a3020, linewidth: 2 }));
+  leadGroup.add(frame);
+
+  scene.add(leadGroup);
+  scene.add(shardGroup);
+
+  // Backlight
+  const light = new THREE.PointLight(0xfff5e6, 2, 20);
+  light.position.z = 6;
+  scene.add(light);
+
+  const ambient = new THREE.AmbientLight(0xfff5e6, 0.3);
+  scene.add(ambient);
+
+  // Mouse interaction
+  let targetRotX = 0, targetRotY = 0;
+
+  document.addEventListener('mousemove', e => {
+    targetRotX = (e.clientY / window.innerHeight - 0.5) * 0.15;
+    targetRotY = (e.clientX / window.innerWidth - 0.5) * 0.15;
+  });
+
+  // Scroll effect
+  let scrollProgress = 0;
+
+  // Animation
+  function animate() {
+    requestAnimationFrame(animate);
+    const t = Date.now() * 0.001;
+
+    shardGroup.rotation.x += (targetRotX - shardGroup.rotation.x) * 0.03;
+    shardGroup.rotation.y += (targetRotY - shardGroup.rotation.y) * 0.03;
+
+    scrollProgress = window.scrollY / window.innerHeight;
+
+    shards.forEach(shard => {
+      const d = shard.userData;
+      shard.position.z = d.originalZ + Math.sin(t * d.speed + d.phase) * 0.15;
+
+      // Emissive pulse
+      const pulse = 0.3 + Math.sin(t * d.speed * 0.5 + d.phase) * 0.3;
+      shard.material.emissiveIntensity = pulse;
+
+      // Scroll fade
+      const fade = Math.max(0, 1 - scrollProgress * 1.5);
+      shard.material.opacity = d.originalOpacity * fade;
+    });
+
+    // Light color shift with scroll
+    const lightHue = (t * 0.02) % 1;
+    light.color.setHSL(0.08 + lightHue * 0.05, 0.15, 0.95);
+
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+})();
+
+// ─── Story Section Canvas ───
+(function() {
+  const canvas = document.getElementById('story-canvas');
+  const ctx = canvas.getContext('2d');
+
+  function resize() {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width * window.devicePixelRatio;
+    canvas.height = rect.height * window.devicePixelRatio;
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = rect.height + 'px';
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const colors = ['#8b1a2b', '#1a3a6b', '#1a5a3b', '#5a1a6b', '#6b4a1a', '#c9a84c'];
+
+  function drawGlassPanel(w, h, t) {
+    ctx.clearRect(0, 0, w, h);
+
+    // Background glow
+    const grad = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w * 0.7);
+    grad.addColorStop(0, 'rgba(201, 168, 76, 0.08)');
+    grad.addColorStop(1, 'rgba(10, 8, 8, 0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+
+    // Glass pieces - abstract cathedral window
+    ctx.save();
+    ctx.translate(w/2, h/2);
+
+    const pieces = 24;
+    for (let ring = 0; ring < 4; ring++) {
+      const r1 = 30 + ring * 40;
+      const r2 = 30 + (ring + 1) * 40;
+      const count = 6 + ring * 4;
+
+      for (let i = 0; i < count; i++) {
+        const a1 = (i / count) * Math.PI * 2 + ring * 0.3 + Math.sin(t * 0.3 + ring) * 0.02;
+        const a2 = ((i + 1) / count) * Math.PI * 2 + ring * 0.3 + Math.sin(t * 0.3 + ring + 1) * 0.02;
+
+        const color = colors[(ring * 3 + i) % colors.length];
+        const alpha = 0.4 + Math.sin(t * 0.5 + i * 0.5 + ring) * 0.2;
+
+        ctx.beginPath();
+        ctx.arc(0, 0, r1, a1, a2);
+        ctx.arc(0, 0, r2, a2, a1, true);
+        ctx.closePath();
+
+        ctx.fillStyle = color;
+        ctx.globalAlpha = alpha;
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(42, 37, 32, 0.8)';
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = 0.8;
+        ctx.stroke();
+      }
+    }
+
+    // Center medallion
+    ctx.globalAlpha = 0.6 + Math.sin(t * 0.7) * 0.2;
+    const centerGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, 25);
+    centerGrad.addColorStop(0, '#c9a84c');
+    centerGrad.addColorStop(1, '#8b1a2b');
+    ctx.fillStyle = centerGrad;
+    ctx.beginPath();
+    ctx.arc(0, 0, 25, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Light rays
+    ctx.globalAlpha = 0.03;
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2 + t * 0.1;
+      ctx.save();
+      ctx.rotate(angle);
+      const rayGrad = ctx.createLinearGradient(0, 0, w, 0);
+      rayGrad.addColorStop(0, '#c9a84c');
+      rayGrad.addColorStop(1, 'transparent');
+      ctx.fillStyle = rayGrad;
+      ctx.beginPath();
+      ctx.moveTo(0, -3);
+      ctx.lineTo(w, -20);
+      ctx.lineTo(w, 20);
+      ctx.lineTo(0, 3);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+
+  function animate() {
+    const t = Date.now() * 0.001;
+    const w = canvas.width / window.devicePixelRatio;
+    const h = canvas.height / window.devicePixelRatio;
+    drawGlassPanel(w, h, t);
+    requestAnimationFrame(animate);
+  }
+  animate();
+})();
+
+// ─── Portfolio ───
+const portfolioWorks = [
+  {
+    title: 'Le Crépuscule',
+    location: 'Private Residence, Saint-Tropez',
+    desc: 'A seven-meter cascade of cobalt and amethyst glass, capturing the precise quality of Mediterranean twilight.',
+    palette: ['#1a3a6b', '#2b4a8b', '#5a1a6b', '#3a2a6b', '#1a4a7b', '#4a1a5b'],
+    pattern: 'flowing',
+  },
+  {
+    title: 'Rosace de l\'Espérance',
+    location: 'Chapelle Notre-Dame, Vallon-en-Vendée',
+    desc: 'A twenty-foot triumphal rosette of forty-eight panels, each hand-painted with iconography reimagined for the contemporary spirit.',
+    palette: ['#8b1a2b', '#c9a84c', '#4a1a3b', '#6b1a2b', '#1a5a3b', '#2b6a4b'],
+    pattern: 'rosette',
+  },
+  {
+    title: 'Verre Liquide',
+    location: 'Museum of Modern Art, Doha',
+    desc: 'Dichroic glass panels arranged to fracture white light into spectral rivers — a meditation on entropy and beauty.',
+    palette: ['#1a6b5a', '#1a5a8b', '#3a8b6b', '#5a6b8b', '#2a7a5a', '#4a5a7b'],
+    pattern: 'liquid',
+  },
+  {
+    title: 'L\'Aube Dorée',
+    location: 'Villa Les Pins, Cap Ferrat',
+    desc: 'Twenty-four panels of antique siderian glass, engineered to illuminate a staircase in pure gold from 5:47 to 6:23 in the month of June.',
+    palette: ['#c9a84c', '#e8d5a3', '#6b4a1a', '#8b6a2b', '#a88a3c', '#d4b85c'],
+    pattern: 'geometric',
+  },
+  {
+    title: 'Néant Lumineux',
+    location: 'Private Collection, Geneva',
+    desc: 'An imposing monochrome panel of near-black cobalt glass — visible only when backlit, revealing hidden layers of ultramarine and violet.',
+    palette: ['#0a1a3b', '#1a2a5b', '#2a1a4b', '#0a2a4b', '#1a3a6b', '#3a2a5b'],
+    pattern: 'minimal',
+  },
+  {
+    title: 'Jardin Clos',
+    location: 'Hôtel de Particular, Paris VII',
+    desc: 'A claustheme of emerald and jade glass, embedding leaded floral motifs within a field of textured forest green.',
+    palette: ['#1a5a3b', '#2a7a4b', '#1a6b4b', '#3a8a5b', '#0a4a2b', '#4a9a6b'],
+    pattern: 'floral',
+  },
+];
+
+const portfolioGrid = document.getElementById('portfolio-grid');
+
+portfolioWorks.forEach((work, idx) => {
+  const item = document.createElement('div');
+  item.className = 'portfolio-item reveal';
+  item.innerHTML = `
+    <canvas class="portfolio-canvas" data-idx="${idx}"></canvas>
+    <div class="overlay">
+      <h3>${work.title}</h3>
+      <div class="location">${work.location}</div>
+      <div class="desc">${work.desc}</div>
+    </div>
+    <div class="edge-glow"></div>
+  `;
+  portfolioGrid.appendChild(item);
+});
+
+// Draw portfolio canvas art
+function initPortfolioCanvases() {
+  document.querySelectorAll('.portfolio-canvas').forEach((canvas, idx) => {
+    const work = portfolioWorks[idx];
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio;
+
+    function resize() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      canvas.style.width = rect.width + 'px';
+      canvas.style.height = rect.height + 'px';
+      ctx.scale(dpr, dpr);
+    }
+    resize();
+
+    function draw(t) {
+      const w = canvas.width / dpr;
+      const h = canvas.height / dpr;
+
+      // Background
+      ctx.fillStyle = '#0a0808';
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.save();
+      ctx.translate(w / 2, h / 2);
+
+      if (work.pattern === 'flowing') {
+        // Flowing waves
+        for (let i = 0; i < 12; i++) {
+          const y = -h * 0.4 + i * (h * 0.8 / 12);
+          const color = work.palette[i % work.palette.length];
+          const alpha = 0.3 + Math.sin(t * 0.5 + i * 0.3) * 0.15;
+
+          ctx.beginPath();
+          ctx.moveTo(-w/2, y);
+          for (let x = -w/2; x <= w/2; x += 5) {
+            const waveY = y + Math.sin(x * 0.02 + t * 0.8 + i * 0.5) * 15 +
+                          Math.sin(x * 0.01 + t * 0.3) * 10;
+            ctx.lineTo(x, waveY);
+          }
+          ctx.lineTo(w/2, h);
+          ctx.lineTo(-w/2, h);
+          ctx.closePath();
+
+          ctx.fillStyle = color;
+          ctx.globalAlpha = alpha;
+          ctx.fill();
+
+          ctx.strokeStyle = 'rgba(42, 37, 32, 0.5)';
+          ctx.lineWidth = 1;
+          ctx.globalAlpha = 0.5;
+          ctx.stroke();
+        }
+      } else if (work.pattern === 'rosette') {
+        // Rosette pattern
+        const rings = 5;
+        for (let ring = 0; ring < rings; ring++) {
+          const r1 = 15 + ring * 25;
+          const r2 = 15 + (ring + 1) * 25;
+          const petals = 8 + ring * 4;
+
+          for (let i = 0; i < petals; i++) {
+            const a1 = (i / petals) * Math.PI * 2 + ring * 0.2;
+            const a2 = ((i + 1) / petals) * Math.PI * 2 + ring * 0.2;
+            const color = work.palette[(ring * 2 + i) % work.palette.length];
+            const alpha = 0.35 + Math.sin(t * 0.4 + i + ring) * 0.15;
+
+            ctx.beginPath();
+            ctx.arc(0, 0, r1, a1, a2);
+            ctx.arc(0, 0, r2, a2, a1, true);
+            ctx.closePath();
+
+            ctx.fillStyle = color;
+            ctx.globalAlpha = alpha;
+            ctx.fill();
+
+            ctx.strokeStyle = 'rgba(42, 37, 32, 0.6)';
+            ctx.lineWidth = 1.5;
+            ctx.globalAlpha = 0.6;
+            ctx.stroke();
+          }
+        }
+
+        // Center
+        ctx.globalAlpha = 0.7;
+        const cGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, 15);
+        cGrad.addColorStop(0, work.palette[0]);
+        cGrad.addColorStop(1, work.palette[1]);
+        ctx.fillStyle = cGrad;
+        ctx.beginPath();
+        ctx.arc(0, 0, 15, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (work.pattern === 'liquid') {
+        // Liquid / dichroic effect
+        for (let i = 0; i < 20; i++) {
+          const x = Math.sin(t * 0.3 + i * 1.7) * w * 0.3;
+          const y = Math.cos(t * 0.2 + i * 1.3) * h * 0.3;
+          const r = 30 + Math.sin(t * 0.5 + i) * 20;
+          const color = work.palette[i % work.palette.length];
+
+          const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
+          grad.addColorStop(0, color);
+          grad.addColorStop(1, 'transparent');
+          ctx.fillStyle = grad;
+          ctx.globalAlpha = 0.25 + Math.sin(t * 0.7 + i * 0.5) * 0.1;
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Flowing lines
+        for (let i = 0; i < 8; i++) {
+          ctx.beginPath();
+          const startY = -h * 0.4 + i * (h * 0.8 / 8);
+          ctx.moveTo(-w/2, startY);
+          for (let x = -w/2; x <= w/2; x += 3) {
+            const waveY = startY +
+              Math.sin(x * 0.015 + t * 0.6 + i) * 25 +
+              Math.sin(x * 0.03 + t * 1.2) * 8;
+            ctx.lineTo(x, waveY);
+          }
+          ctx.strokeStyle = work.palette[i % work.palette.length];
+          ctx.globalAlpha = 0.2;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+      } else if (work.pattern === 'geometric') {
+        // Geometric diamonds
+        const cols = 6;
+        const rows = 8;
+        const dw = (w * 0.9) / cols;
+        const dh = (h * 0.9) / rows;
+
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const x = -w * 0.45 + c * dw + dw / 2;
+            const y = -h * 0.45 + r * dh + dh / 2;
+            const color = work.palette[(r + c) % work.palette.length];
+            const alpha = 0.3 + Math.sin(t * 0.5 + r * 0.5 + c * 0.3) * 0.15;
+
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(Math.PI / 4);
+
+            const s = Math.min(dw, dh) * 0.35;
+            ctx.fillStyle = color;
+            ctx.globalAlpha = alpha;
+            ctx.fillRect(-s/2, -s/2, s, s);
+
+            ctx.strokeStyle = 'rgba(42, 37, 32, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.globalAlpha = 0.5;
+            ctx.strokeRect(-s/2, -s/2, s, s);
+
+            ctx.restore();
+          }
+        }
+      } else if (work.pattern === 'minimal') {
+        // Minimal - large dark panels with subtle shifts
+        const panels = 6;
+        for (let i = 0; i < panels; i++) {
+          const y = -h * 0.45 + i * (h * 0.9 / panels);
+          const color = work.palette[i];
+          const alpha = 0.5 + Math.sin(t * 0.3 + i * 0.8) * 0.15;
+
+          ctx.fillStyle = color;
+          ctx.globalAlpha = alpha;
+          ctx.fillRect(-w * 0.45, y, w * 0.9, h * 0.9 / panels - 3);
+
+          ctx.strokeStyle = 'rgba(42, 37, 32, 0.4)';
+          ctx.lineWidth = 1;
+          ctx.globalAlpha = 0.4;
+          ctx.strokeRect(-w * 0.45, y, w * 0.9, h * 0.9 / panels - 3);
+        }
+
+        // Subtle light reveal
+        ctx.globalAlpha = 0.05 + Math.sin(t * 0.4) * 0.03;
+        const lGrad = ctx.createLinearGradient(-w/2, 0, w/2, 0);
+        lGrad.addColorStop(0, 'transparent');
+        lGrad.addColorStop(0.5, work.palette[2]);
+        lGrad.addColorStop(1, 'transparent');
+        ctx.fillStyle = lGrad;
+        ctx.fillRect(-w * 0.45, -h * 0.45, w * 0.9, h * 0.9);
+      } else if (work.pattern === 'floral') {
+        // Floral / jardin motif
+        // Background field
+        ctx.fillStyle = work.palette[0];
+        ctx.globalAlpha = 0.3;
+        ctx.fillRect(-w * 0.45, -h * 0.45, w * 0.9, h * 0.9);
+
+        // Lead grid
+        const gridAlpha = 0.3;
+        ctx.strokeStyle = 'rgba(42, 37, 32, 0.6)';
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = gridAlpha;
+
+        // Vertical stems
+        for (let i = 0; i < 5; i++) {
+          const x = -w * 0.3 + i * (w * 0.6 / 4);
+          ctx.beginPath();
+          ctx.moveTo(x, h * 0.45);
+          for (let y = h * 0.45; y > -h * 0.45; y -= 5) {
+            const sway = Math.sin(y * 0.02 + t * 0.3 + i) * 8;
+            ctx.lineTo(x + sway, y);
+          }
+          ctx.stroke();
+        }
+
+        // Floral circles
+        for (let i = 0; i < 12; i++) {
+          const x = Math.sin(i * 2.1) * w * 0.3;
+          const y = -h * 0.35 + i * (h * 0.7 / 11);
+          const r = 12 + Math.sin(t * 0.5 + i) * 4;
+          const color = work.palette[i % work.palette.length];
+
+          ctx.globalAlpha = 0.35 + Math.sin(t * 0.4 + i * 0.7) * 0.15;
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.strokeStyle = 'rgba(42, 37, 32, 0.5)';
+          ctx.lineWidth = 1.5;
+          ctx.globalAlpha = 0.5;
+          ctx.stroke();
+
+          // Petals
+          for (let p = 0; p < 5; p++) {
+            const pa = (p / 5) * Math.PI * 2 + t * 0.2;
+            ctx.fillStyle = color;
+            ctx.globalAlpha = 0.2;
+            ctx.beginPath();
+            ctx.ellipse(
+              x + Math.cos(pa) * r * 0.8,
+              y + Math.sin(pa) * r * 0.8,
+              r * 0.4, r * 0.2, pa, 0, Math.PI * 2
+            );
+            ctx.fill();
+          }
+        }
+      }
+
+      ctx.restore();
+    }
+
+    function animate() {
+      const t = Date.now() * 0.001;
+      draw(t);
+      requestAnimationFrame(animate);
+    }
+    animate();
+  });
+}
+
+// ─── Caustic Overlay ───
+(function() {
+  const canvas = document.getElementById('caustic-overlay');
+  const ctx = canvas.getContext('2d');
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function drawCaustics(t) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const numCaustics = 6;
+    for (let i = 0; i < numCaustics; i++) {
+      const x = canvas.width * (0.2 + 0.6 * Math.sin(t * 0.15 + i * 1.5));
+      const y = canvas.height * (0.2 + 0.6 * Math.cos(t * 0.12 + i * 2.1));
+      const r = 100 + Math.sin(t * 0.3 + i) * 50;
+
+      const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
+      const hue = (t * 10 + i * 60) % 360;
+      grad.addColorStop(0, `hsla(${hue}, 60%, 50%, 0.15)`);
+      grad.addColorStop(1, 'transparent');
+
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function animate() {
+    drawCaustics(Date.now() * 0.001);
+    requestAnimationFrame(animate);
+  }
+  animate();
+})();
+
+// ─── Scroll Reveal ───
+const revealElements = document.querySelectorAll('.reveal');
+
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
+
+revealElements.forEach(el => observer.observe(el));
+
+// ─── Cursor Color Changes ───
+const sections = document.querySelectorAll('section');
+const cursorColors = {
+  '#hero': 'rgba(201, 168, 76, 0.6)',
+  '#story': 'rgba(139, 26, 43, 0.5)',
+  '#process': 'rgba(26, 58, 107, 0.5)',
+  '#portfolio': 'rgba(90, 26, 107, 0.5)',
+  '#contact': 'rgba(201, 168, 76, 0.5)',
+};
+
+function updateCursorColor() {
+  let currentSection = '#hero';
+  sections.forEach(section => {
+    const rect = section.getBoundingClientRect();
+    if (rect.top < window.innerHeight * 0.5 && rect.bottom > window.innerHeight * 0.5) {
+      currentSection = '#' + section.id;
+    }
+  });
+
+  const color = cursorColors[currentSection] || cursorColors['#hero'];
+  cursor.style.background = `radial-gradient(circle, ${color}, transparent)`;
+  cursorGlow.style.background = color;
+}
+
+window.addEventListener('scroll', updateCursorColor);
+updateCursorColor();
+
+// ─── Smooth Parallax ───
+window.addEventListener('scroll', () => {
+  const scrollY = window.scrollY;
+  const hero = document.getElementById('hero');
+  hero.style.transform = `translateY(${scrollY * 0.3}px)`;
+  hero.style.opacity = Math.max(0, 1 - scrollY / (window.innerHeight * 0.8));
+});
+
+// ─── Init Portfolio ───
+initPortfolioCanvases();
+
+// ─── Nav scroll effect ───
+let lastScroll = 0;
+window.addEventListener('scroll', () => {
+  const nav = document.getElementById('nav');
+  const currentScroll = window.scrollY;
+
+  if (currentScroll > 100) {
+    nav.style.background = 'rgba(10, 8, 8, 0.8)';
+    nav.style.backdropFilter = 'blur(20px)';
+    nav.style.mixBlendMode = 'normal';
+  } else {
+    nav.style.background = 'transparent';
+    nav.style.backdropFilter = 'none';
+    nav.style.mixBlendMode = 'difference';
+  }
+
+  lastScroll = currentScroll;
+});
+</script>
+</body>
+</html>

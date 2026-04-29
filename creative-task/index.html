@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Creative Design Challenge — LLM Comparison</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0d0e;
+      --surface: #111416;
+      --surface2: #161a1c;
+      --border: #1e2628;
+      --accent: #d97706;
+      --accent2: #fbbf24;
+      --text: #e2e8e0;
+      --muted: #64748b;
+      --green: #22c55e;
+      --amber: #f59e0b;
+      --red: #ef4444;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Header ───────────────────────────────────── */
+
+    header {
+      padding: 48px 24px 32px;
+      text-align: center;
+      background: linear-gradient(180deg, #0d1210 0%, var(--bg) 100%);
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+
+    header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(217,119,6,0.10) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .header-back {
+      position: absolute;
+      top: 20px;
+      left: 24px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 500;
+      text-decoration: none;
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: var(--surface);
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    .header-back:hover {
+      color: var(--accent2);
+      border-color: rgba(251,191,36,0.3);
+    }
+
+    .header-tag {
+      display: inline-block;
+      background: rgba(217,119,6,0.15);
+      border: 1px solid rgba(217,119,6,0.3);
+      color: var(--accent2);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      font-size: clamp(28px, 5vw, 52px);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #e2e8e0 30%, #fbbf24);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 16px;
+      max-width: 620px;
+      margin: 0 auto 24px;
+      line-height: 1.6;
+    }
+
+    .header-stats {
+      display: flex;
+      gap: 32px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .hstat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .hstat-val {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--accent2);
+    }
+
+    .hstat-label {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    /* ── Main / grid ─────────────────────────────── */
+
+    main {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+    }
+
+    /* ── Compare toolbar ─────────────────────────── */
+
+    .compare-bar {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .compare-hint {
+      font-size: 12px;
+      color: var(--muted);
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none;
+    }
+
+    body.compare-mode .compare-hint {
+      opacity: 1;
+    }
+
+    .compare-toggle-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(217,119,6,0.1);
+      border: 1px solid rgba(217,119,6,0.25);
+      color: var(--accent2);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 18px;
+      border-radius: 40px;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+      white-space: nowrap;
+    }
+
+    .compare-toggle-btn:hover {
+      background: rgba(217,119,6,0.2);
+      border-color: var(--accent);
+    }
+
+    body.compare-mode .compare-toggle-btn {
+      background: rgba(217,119,6,0.2);
+      border-color: var(--accent);
+    }
+
+    /* ── Grid & cards ────────────────────────────── */
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 24px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+      text-decoration: none;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent), 0 20px 40px rgba(0,0,0,0.5);
+      transform: translateY(-2px);
+    }
+
+    /* Selected state in compare mode */
+    .card.selected {
+      border-color: var(--accent) !important;
+      box-shadow: 0 0 0 2px var(--accent), 0 0 30px rgba(217,119,6,0.25) !important;
+      transform: translateY(-2px);
+    }
+
+    /* ── Select indicator (checkbox circle) ──────── */
+
+    .select-check {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.55);
+      border: 2px solid rgba(255,255,255,0.25);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      color: white;
+      z-index: 10;
+      transition: background 0.15s, border-color 0.15s, transform 0.15s;
+      backdrop-filter: blur(4px);
+    }
+
+    body.compare-mode .select-check {
+      display: flex;
+    }
+
+    .card.selected .select-check {
+      background: var(--accent);
+      border-color: var(--accent);
+      transform: scale(1.1);
+    }
+
+    /* Select number badge (1 or 2) */
+    .select-num {
+      display: none;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .card.selected .select-check-icon { display: none; }
+    .card.selected .select-num { display: block; }
+
+    /* ── Preview wrap ─────────────────────────────── */
+
+    .preview-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: #060808;
+      overflow: hidden;
+    }
+
+    .preview-iframe-container {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+    }
+
+    .preview-iframe-container iframe {
+      width: 1280px;
+      height: 720px;
+      border: none;
+      transform-origin: top left;
+      transform: scale(var(--scale, 0.28125));
+      pointer-events: none;
+    }
+
+    .preview-placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: linear-gradient(135deg, #0d1210 0%, #0a0d0e 100%);
+      transition: opacity 0.3s;
+    }
+
+    .preview-placeholder-icon {
+      font-size: 40px;
+      opacity: 0.3;
+    }
+
+    .preview-placeholder-text {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* Normal hover overlay */
+    .view-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+
+    .card:hover .view-overlay {
+      background: rgba(0,0,0,0.45);
+    }
+
+    /* In compare mode: change overlay tint and button label */
+    body.compare-mode .card:hover .view-overlay {
+      background: rgba(217,119,6,0.15);
+    }
+
+    body.compare-mode .card.selected:hover .view-overlay {
+      background: rgba(217,119,6,0.25);
+    }
+
+    .view-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent);
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      padding: 10px 22px;
+      border-radius: 40px;
+      opacity: 0;
+      transform: scale(0.85);
+      transition: opacity 0.2s, transform 0.2s;
+      box-shadow: 0 4px 20px rgba(217,119,6,0.5);
+    }
+
+    .card:hover .view-btn {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    /* In compare mode swap label */
+    .view-btn-default { display: inline; }
+    .view-btn-select  { display: none;   }
+
+    body.compare-mode .view-btn-default { display: none;   }
+    body.compare-mode .view-btn-select  { display: inline; }
+
+    body.compare-mode .card.selected .view-btn-select { display: none; }
+
+    /* ── Card body ────────────────────────────────── */
+
+    .card-body {
+      padding: 18px 20px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      flex: 1;
+    }
+
+    .card-header {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .site-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.3;
+    }
+
+    .model-name {
+      font-size: 12px;
+      color: var(--accent2);
+      font-weight: 500;
+      font-family: 'Consolas', 'Courier New', monospace;
+    }
+
+    .stats-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .stat-pill {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 11px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .stat-pill .val {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .stat-pill.gen {
+      border-color: rgba(251,191,36,0.25);
+    }
+
+    .stat-pill.gen .val {
+      color: var(--accent2);
+    }
+
+    .stat-pill.prompts-good { border-color: rgba(34,197,94,0.2); }
+    .stat-pill.prompts-mid  { border-color: rgba(245,158,11,0.2); }
+    .stat-pill.prompts-many { border-color: rgba(239,68,68,0.2);  }
+
+    .stat-pill.lang-fr {
+      border-color: rgba(251,191,36,0.2);
+    }
+
+    .stat-pill.lang-fr .val {
+      color: var(--accent2);
+    }
+
+    .notes-wrap {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+    }
+
+    .notes-expand {
+      flex-shrink: 0;
+      background: none;
+      border: none;
+      color: var(--accent2);
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 1px 4px;
+      line-height: 1.55;
+      opacity: 0.7;
+      transition: opacity 0.15s;
+      font-family: monospace;
+    }
+
+    .notes-expand:hover { opacity: 1; }
+
+    .notes {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.55;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .notes.expanded {
+      display: block;
+      -webkit-line-clamp: unset;
+      overflow: visible;
+    }
+
+    .notes-expand.expanded { transform: rotate(90deg); }
+
+    /* ── Prompt accordion ────────────────────────── */
+
+    .prompt-section {
+      max-width: 860px;
+      margin: 32px auto 0;
+    }
+
+    .prompt-toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 18px;
+      cursor: pointer;
+      width: 100%;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 500;
+      transition: border-color 0.2s, background 0.2s;
+      user-select: none;
+    }
+
+    .prompt-toggle:hover {
+      border-color: var(--accent);
+      background: var(--surface2);
+    }
+
+    .prompt-toggle-icon {
+      font-size: 16px;
+      color: var(--accent2);
+      flex-shrink: 0;
+    }
+
+    .prompt-toggle-label {
+      flex: 1;
+      text-align: left;
+    }
+
+    .prompt-toggle-arrow {
+      font-size: 11px;
+      color: var(--muted);
+      transition: transform 0.2s;
+    }
+
+    .prompt-section.open .prompt-toggle-arrow {
+      transform: rotate(180deg);
+    }
+
+    .prompt-body {
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height 0.3s ease;
+    }
+
+    .prompt-section.open .prompt-body {
+      max-height: 600px;
+    }
+
+    .prompt-content {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 10px 10px;
+      padding: 20px 22px;
+      font-size: 13px;
+      line-height: 1.7;
+      color: #c8d6c0;
+      white-space: pre-wrap;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+
+    /* ── Compare floating action bar ─────────────── */
+
+    .compare-float {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(90px);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      padding: 10px 10px 10px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(217,119,6,0.15);
+      z-index: 150;
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s;
+      opacity: 0;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .compare-float.visible {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .compare-float-label {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .compare-float-label strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .compare-float-dots {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .compare-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--border);
+      border: 1px solid rgba(255,255,255,0.1);
+      transition: background 0.2s;
+    }
+
+    .compare-dot.filled {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .compare-open-btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 9px 20px;
+      border-radius: 40px;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s;
+      letter-spacing: 0.03em;
+    }
+
+    .compare-open-btn:disabled {
+      opacity: 0.35;
+      cursor: default;
+      transform: none !important;
+    }
+
+    .compare-open-btn:not(:disabled):hover {
+      transform: scale(1.04);
+    }
+
+    /* ── Compare fullscreen overlay ──────────────── */
+
+    .compare-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+
+    .compare-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .compare-header {
+      height: 52px;
+      display: flex;
+      align-items: center;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 16px;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .compare-model-label {
+      flex: 1;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent2);
+      font-family: 'Consolas', 'Courier New', monospace;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .compare-model-label.right {
+      text-align: right;
+    }
+
+    .compare-header-center {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .compare-swap-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 14px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    .compare-swap-btn:hover {
+      color: var(--accent2);
+      border-color: rgba(251,191,36,0.3);
+    }
+
+    .compare-close-btn {
+      background: rgba(239,68,68,0.12);
+      border: 1px solid rgba(239,68,68,0.25);
+      color: #f87171;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+      white-space: nowrap;
+    }
+
+    .compare-close-btn:hover {
+      background: rgba(239,68,68,0.22);
+      border-color: rgba(239,68,68,0.45);
+    }
+
+    .compare-frames {
+      flex: 1;
+      display: flex;
+      min-height: 0;
+    }
+
+    .compare-pane {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .compare-pane iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    .compare-pane-label {
+      position: absolute;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.65);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 500;
+      padding: 4px 12px;
+      border-radius: 20px;
+      pointer-events: none;
+      backdrop-filter: blur(6px);
+      white-space: nowrap;
+    }
+
+    .compare-divider {
+      width: 3px;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+
+    /* ── Footer ──────────────────────────────────── */
+
+    footer {
+      text-align: center;
+      padding: 24px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    @media (max-width: 480px) {
+      .grid { grid-template-columns: 1fr; }
+      .header-back { position: static; margin-bottom: 20px; display: inline-flex; }
+      .compare-frames { flex-direction: column; }
+      .compare-divider { width: 100%; height: 3px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="../index.html" class="header-back">← Flight Combat Task</a>
+  <div class="header-tag">LLM Benchmark</div>
+  <h1>Creative Design<br>Challenge</h1>
+  <p class="subtitle">10 local LLMs tasked with building the same luxury stained glass studio website from a single prompt. Same hardware, same rules — no images, no templates.</p>
+  <div class="header-stats">
+    <div class="hstat"><span class="hstat-val">10</span><span class="hstat-label">Models tested</span></div>
+    <div class="hstat"><span class="hstat-val">HTML/CSS/JS</span><span class="hstat-label">Stack</span></div>
+    <div class="hstat"><span class="hstat-val">1</span><span class="hstat-label">Prompt to start</span></div>
+    <div class="hstat"><span class="hstat-val">Local</span><span class="hstat-label">Inference (MLX)</span></div>
+  </div>
+</header>
+
+<div class="prompt-section" id="promptSection">
+  <button class="prompt-toggle" onclick="togglePrompt()">
+    <span class="prompt-toggle-icon">📋</span>
+    <span class="prompt-toggle-label">View the original prompt given to every model</span>
+    <span class="prompt-toggle-arrow">▼</span>
+  </button>
+  <div class="prompt-body">
+    <div class="prompt-content">Create a single-file HTML website for Lumière Atelier, a bespoke stained glass studio in Lyon creating museum-quality architectural installations. Vanilla HTML, CSS, Three.js and JavaScript only. No images — every visual generated in code.
+The design must be genuinely extraordinary — the kind of site that has never existed before, benchmark is Awwwards Site of the Year. The palette, typography, interactions, and layout are entirely your creative decision. If your design could have come from a template or a mediocre agency, start over.
+Required sections: studio story, commission process, portfolio of 6 invented works, contact. All copy must feel like exquisite authentic luxury brand writing.</div>
+  </div>
+</div>
+
+<main>
+  <div class="compare-bar">
+    <span class="compare-hint" id="compareHint">Click two cards to select them</span>
+    <button class="compare-toggle-btn" id="compareToggleBtn" onclick="toggleCompareMode()">⊞ Compare models</button>
+  </div>
+  <div class="grid" id="grid"></div>
+</main>
+
+<footer>
+  Click any card to open the website &nbsp;·&nbsp; All sites run locally in your browser
+</footer>
+
+<!-- Floating action bar -->
+<div class="compare-float" id="compareFloat">
+  <div class="compare-float-dots">
+    <div class="compare-dot" id="dot1"></div>
+    <div class="compare-dot" id="dot2"></div>
+  </div>
+  <span class="compare-float-label" id="compareFloatLabel">Select one more</span>
+  <button class="compare-open-btn" id="compareOpenBtn" onclick="openCompare()" disabled>Compare →</button>
+</div>
+
+<!-- Fullscreen compare overlay -->
+<div class="compare-overlay" id="compareOverlay">
+  <div class="compare-header">
+    <span class="compare-model-label" id="compareLabel1"></span>
+    <div class="compare-header-center">
+      <button class="compare-swap-btn" onclick="swapPanes()" title="Swap sides">⇄</button>
+      <button class="compare-close-btn" onclick="closeCompare()">✕ Close</button>
+    </div>
+    <span class="compare-model-label right" id="compareLabel2"></span>
+  </div>
+  <div class="compare-frames">
+    <div class="compare-pane" id="comparePane1">
+      <iframe id="compareFrame1" sandbox="allow-scripts allow-same-origin" title="Left model"></iframe>
+      <div class="compare-pane-label" id="comparePaneLabel1"></div>
+    </div>
+    <div class="compare-divider"></div>
+    <div class="compare-pane" id="comparePane2">
+      <iframe id="compareFrame2" sandbox="allow-scripts allow-same-origin" title="Right model"></iframe>
+      <div class="compare-pane-label" id="comparePaneLabel2"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const sites = [
+    {
+      file: 'qwen3.6-27bdense.html',
+      title: 'Lumière Atelier',
+      model: 'Qwen3.6 27B Dense · Unsloth',
+      genSpeed: 12.1,
+      tokens: 37078,
+      prompts: 1,
+      lines: 1481,
+      lang: 'en',
+      notes: 'Best result in the set. One-shotted with zero bugs. A custom cursor — a speck of light — and mouse-following illumination on the rosette hero design make it feel alive. Copy perfectly captures the tone of a bespoke atelier, no AI slop. Fully coherent luxury brand site.',
+    },
+    {
+      file: 'qwen3.6-35b-unsloth.html',
+      title: 'Lumière Atelier',
+      model: 'Qwen3.6 35B · Unsloth',
+      genSpeed: 44.8,
+      tokens: 46085,
+      prompts: 1,
+      lines: 1556,
+      lang: 'en',
+      notes: 'One-shotted, no bugs. Impressive floating stained glass in the hero. Memorable closing animation of light rays through glass panes. Standout copy: "We do not make windows. We make the light that passes through them." All links and interactions work.',
+    },
+    {
+      file: 'qwen3codernext80bmoe.html',
+      title: 'Lumière Atelier',
+      model: 'Qwen3-Coder-Next 80B · MoE',
+      genSpeed: 40.6,
+      tokens: 31535,
+      prompts: 1,
+      lines: 1182,
+      lang: 'en',
+      notes: 'Noticeably stronger result than this model\'s previous rounds. Floating stained glass tiles in the hero, clear navigation, no fixes needed. Works area plays it safe — designs are too similar to each other. Font choice not perfectly suited to the luxury positioning. Above average overall.',
+    },
+    {
+      file: 'qwen3.5-35b-mlx-c.html',
+      title: 'Lumière Atelier',
+      model: 'Qwen3.5 35B · MLX Community',
+      genSpeed: 49.5,
+      tokens: 31965,
+      prompts: 1,
+      lines: 1168,
+      lang: 'fr',
+      notes: 'Generated in French — not in the brief, but fitting for a Lyon atelier. Fastest completion token-wise. Sits firmly in the middle: not remarkable, not broken. Nothing to write home about, but a solid one-shot result.',
+    },
+    {
+      file: 'qwen3.6-35b-mlx-c.html',
+      title: 'Lumière Atelier',
+      model: 'Qwen3.6 35B · MLX Community',
+      genSpeed: 48.2,
+      tokens: 51536,
+      prompts: 1,
+      lines: 873,
+      lang: 'fr',
+      notes: 'French language output. First model to implement truly expandable portfolio works — clicking reveals detail. Portfolio designs share too many layouts and colors, lacking individual authenticity between pieces. Good storytelling structure, no custom cursor.',
+    },
+    {
+      file: 'qwopus3.5-27bdense.html',
+      title: 'Lumière Atelier',
+      model: 'Qwopus3.5 27B Dense',
+      genSpeed: 12.4,
+      tokens: 35853,
+      prompts: 2,
+      lines: 1266,
+      lang: 'fr',
+      notes: 'French language, good background visuals, well-written content suited to a luxury brand. Needed a follow-up to fix the works/portfolio area. Slider button placement is obscure — easy to miss. Work preview disappears after one second: a persistent bug after prompting.',
+    },
+    {
+      file: 'qwen3.5-27bdense.html',
+      title: 'Lumière Atelier',
+      model: 'Qwen3.5 27B Dense',
+      genSpeed: 9.3,
+      tokens: 54325,
+      prompts: 2,
+      lines: 958,
+      lang: 'en',
+      notes: 'Solid result that needed one fix pass. Decent animations and a pleasant animated background. Works section coherent and appropriate to the brief. Fonts well-chosen. Nothing groundbreaking but consistently competent.',
+    },
+    {
+      file: 'gemma26bmoe.html',
+      title: 'Lumière Atelier',
+      model: 'Gemma 4 26B · MoE Unsloth',
+      genSpeed: 47.2,
+      tokens: 54377,
+      prompts: 2,
+      lines: 463,
+      lang: 'en',
+      notes: 'Weakest first attempt — minimalist text on black, far below the brief. Redesigned after explicit negative feedback. The revision\'s standout touch: hovering each portfolio work changes the entire page background color. Still far below benchmark but shows the model can adapt.',
+    },
+    {
+      file: 'gemma31bdense.html',
+      title: 'Lumière Atelier',
+      model: 'Gemma 4 31B Dense · Unsloth',
+      genSpeed: 8.8,
+      tokens: 57521,
+      prompts: 2,
+      lines: 500,
+      lang: 'en',
+      notes: 'Underwhelming across both attempts. References a noise.svg that does not exist. Portfolio section absent in the first pass and still broken after a follow-up that reused the same missing asset. Font choices are unsuited to the brief. Highest token count for the least result.',
+    },
+    {
+      file: 'qwen3.6-35b-oq-omlx.html',
+      title: 'Lumière Atelier',
+      model: 'Qwen3.6 35B · oQ oMLX',
+      genSpeed: 39.6,
+      tokens: 74834,
+      prompts: 2,
+      lines: 831,
+      lang: 'fr',
+      notes: 'Worst overall result. First prompt produced a broken render — the model internally regenerated the HTML twice. Second prompt triggered a looping spiral: it kept fixing working code while ignoring real bugs. All portfolio works share identical icons. Most tokens consumed of any model.',
+    },
+  ];
+
+  /* ── Card building ───────────────────────────── */
+
+  function promptClass(n) {
+    if (n <= 1) return 'prompts-good';
+    if (n <= 2) return 'prompts-mid';
+    return 'prompts-many';
+  }
+
+  function buildCard(s) {
+    const card = document.createElement('a');
+    card.className = 'card';
+    card.href = s.file;
+    card.target = '_blank';
+    card.rel = 'noopener';
+    card.dataset.model = s.model;
+
+    const scaleApprox = 0.28125;
+
+    card.innerHTML = `
+      <div class="preview-wrap" data-src="${s.file}">
+        <div class="preview-iframe-container" style="--scale:${scaleApprox}"></div>
+        <div class="preview-placeholder">
+          <div class="preview-placeholder-icon">✦</div>
+          <div class="preview-placeholder-text">Loading preview…</div>
+        </div>
+        <div class="view-overlay">
+          <div class="view-btn">
+            <span class="view-btn-default">↗&nbsp; View Website</span>
+            <span class="view-btn-select">+ Select</span>
+          </div>
+        </div>
+        <div class="select-check">
+          <span class="select-check-icon">○</span>
+          <span class="select-num"></span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-header">
+          <div class="site-title">${s.title}</div>
+          <div class="model-name">${s.model}</div>
+        </div>
+        <div class="stats-row">
+          <div class="stat-pill gen">
+            <span>Gen</span>
+            <span class="val">${s.genSpeed} tok/s</span>
+          </div>
+          <div class="stat-pill ${promptClass(s.prompts)}">
+            <span>Prompts</span>
+            <span class="val">${s.prompts}</span>
+          </div>
+          <div class="stat-pill">
+            <span>Tokens</span>
+            <span class="val">${s.tokens.toLocaleString()}</span>
+          </div>
+          <div class="stat-pill">
+            <span>Lines</span>
+            <span class="val">${s.lines.toLocaleString()}</span>
+          </div>
+          ${s.lang === 'fr' ? `<div class="stat-pill lang-fr"><span class="val">🇫🇷 French</span></div>` : ''}
+        </div>
+        <div class="notes-wrap">
+          <button class="notes-expand" onclick="toggleNotes(event, this)" title="Expand">›</button>
+          <p class="notes">${s.notes}</p>
+        </div>
+      </div>
+    `;
+
+    card.addEventListener('click', (e) => {
+      if (!compareMode) return;
+      e.preventDefault();
+      toggleSelect(card);
+    });
+
+    return card;
+  }
+
+  const grid = document.getElementById('grid');
+  const cardEls = [];
+
+  sites.forEach(s => {
+    const card = buildCard(s);
+    grid.appendChild(card);
+    cardEls.push(card);
+  });
+
+  /* ── Lazy iframe previews ────────────────────── */
+
+  function injectIframe(wrapEl) {
+    if (wrapEl.dataset.loaded) return;
+    wrapEl.dataset.loaded = '1';
+
+    const src = wrapEl.dataset.src;
+    const containerEl = wrapEl.querySelector('.preview-iframe-container');
+    const placeholder = wrapEl.querySelector('.preview-placeholder');
+    const scale = wrapEl.offsetWidth / 1280;
+
+    containerEl.style.setProperty('--scale', scale);
+
+    const iframe = document.createElement('iframe');
+    iframe.src = src;
+    iframe.scrolling = 'no';
+    iframe.sandbox = 'allow-scripts allow-same-origin';
+    iframe.title = src;
+    iframe.addEventListener('load', () => {
+      if (placeholder) placeholder.style.opacity = '0';
+    });
+    containerEl.appendChild(iframe);
+  }
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const wrap = entry.target.querySelector('.preview-wrap');
+        if (wrap) injectIframe(wrap);
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { rootMargin: '200px' });
+
+  cardEls.forEach(card => observer.observe(card));
+
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      document.querySelectorAll('.preview-wrap[data-loaded]').forEach(wrap => {
+        const containerEl = wrap.querySelector('.preview-iframe-container');
+        const scale = wrap.offsetWidth / 1280;
+        containerEl.style.setProperty('--scale', scale);
+        const iframe = containerEl.querySelector('iframe');
+        if (iframe) iframe.style.transform = `scale(${scale})`;
+      });
+    }, 150);
+  });
+
+  /* ── Notes toggle ────────────────────────────── */
+
+  function toggleNotes(e, btn) {
+    e.preventDefault();
+    e.stopPropagation();
+    const notes = btn.nextElementSibling;
+    const expanded = notes.classList.toggle('expanded');
+    btn.classList.toggle('expanded', expanded);
+  }
+
+  function togglePrompt() {
+    document.getElementById('promptSection').classList.toggle('open');
+  }
+
+  /* ── Compare mode ────────────────────────────── */
+
+  let compareMode = false;
+  let selectedCards = [];   // [{card, file, model}, ...]
+
+  function toggleCompareMode() {
+    compareMode = !compareMode;
+    document.body.classList.toggle('compare-mode', compareMode);
+
+    const btn = document.getElementById('compareToggleBtn');
+    if (compareMode) {
+      btn.textContent = '✕ Exit compare';
+    } else {
+      btn.textContent = '⊞ Compare models';
+      clearSelections();
+    }
+  }
+
+  function toggleSelect(card) {
+    const file  = card.getAttribute('href');
+    const model = card.dataset.model;
+
+    const idx = selectedCards.findIndex(s => s.card === card);
+
+    if (idx >= 0) {
+      // Deselect
+      selectedCards.splice(idx, 1);
+      card.classList.remove('selected');
+      rebuildSelectionNumbers();
+    } else {
+      if (selectedCards.length >= 2) {
+        // Bump the oldest out
+        const oldest = selectedCards.shift();
+        oldest.card.classList.remove('selected');
+        const num = oldest.card.querySelector('.select-num');
+        if (num) num.textContent = '';
+      }
+      selectedCards.push({ card, file, model });
+      card.classList.add('selected');
+      rebuildSelectionNumbers();
+    }
+
+    updateFloat();
+  }
+
+  function rebuildSelectionNumbers() {
+    selectedCards.forEach((s, i) => {
+      const num = s.card.querySelector('.select-num');
+      if (num) num.textContent = i + 1;
+    });
+  }
+
+  function clearSelections() {
+    selectedCards.forEach(s => {
+      s.card.classList.remove('selected');
+      const num = s.card.querySelector('.select-num');
+      if (num) num.textContent = '';
+    });
+    selectedCards = [];
+    updateFloat();
+  }
+
+  function updateFloat() {
+    const floatEl  = document.getElementById('compareFloat');
+    const label    = document.getElementById('compareFloatLabel');
+    const openBtn  = document.getElementById('compareOpenBtn');
+    const dot1     = document.getElementById('dot1');
+    const dot2     = document.getElementById('dot2');
+
+    if (!compareMode || selectedCards.length === 0) {
+      floatEl.classList.remove('visible');
+      return;
+    }
+
+    floatEl.classList.add('visible');
+    dot1.classList.toggle('filled', selectedCards.length >= 1);
+    dot2.classList.toggle('filled', selectedCards.length >= 2);
+
+    if (selectedCards.length === 1) {
+      label.innerHTML = `<strong>${selectedCards[0].model}</strong> — select one more`;
+      openBtn.disabled = true;
+    } else {
+      label.innerHTML = `<strong>${selectedCards[0].model}</strong> vs <strong>${selectedCards[1].model}</strong>`;
+      openBtn.disabled = false;
+    }
+  }
+
+  /* ── Compare overlay ─────────────────────────── */
+
+  function openCompare() {
+    if (selectedCards.length < 2) return;
+
+    const [a, b] = selectedCards;
+
+    document.getElementById('compareLabel1').textContent = a.model;
+    document.getElementById('compareLabel2').textContent = b.model;
+    document.getElementById('comparePaneLabel1').textContent = a.model;
+    document.getElementById('comparePaneLabel2').textContent = b.model;
+    document.getElementById('compareFrame1').src = a.file;
+    document.getElementById('compareFrame2').src = b.file;
+
+    document.getElementById('compareOverlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeCompare() {
+    document.getElementById('compareOverlay').classList.remove('open');
+    document.body.style.overflow = '';
+    setTimeout(() => {
+      document.getElementById('compareFrame1').src = '';
+      document.getElementById('compareFrame2').src = '';
+    }, 280);
+  }
+
+  function swapPanes() {
+    const f1 = document.getElementById('compareFrame1');
+    const f2 = document.getElementById('compareFrame2');
+    const l1 = document.getElementById('compareLabel1');
+    const l2 = document.getElementById('compareLabel2');
+    const p1 = document.getElementById('comparePaneLabel1');
+    const p2 = document.getElementById('comparePaneLabel2');
+
+    [f1.src, f2.src]         = [f2.src, f1.src];
+    [l1.textContent, l2.textContent] = [l2.textContent, l1.textContent];
+    [p1.textContent, p2.textContent] = [p2.textContent, p1.textContent];
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (document.getElementById('compareOverlay').classList.contains('open')) {
+        closeCompare();
+      } else if (compareMode) {
+        toggleCompareMode();
+      }
+    }
+  });
+</script>
+
+</body>
+</html>

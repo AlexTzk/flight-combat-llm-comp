@@ -1,0 +1,3 @@
+Create a single-file HTML website for Lumière Atelier, a bespoke stained glass studio in Lyon creating museum-quality architectural installations. Vanilla HTML, CSS, Three.js and JavaScript only. No images — every visual generated in code.
+The design must be genuinely extraordinary — the kind of site that has never existed before, benchmark is Awwwards Site of the Year. The palette, typography, interactions, and layout are entirely your creative decision. If your design could have come from a template or a mediocre agency, start over.
+Required sections: studio story, commission process, portfolio of 6 invented works, contact. All copy must feel like exquisite authentic luxury brand writing.

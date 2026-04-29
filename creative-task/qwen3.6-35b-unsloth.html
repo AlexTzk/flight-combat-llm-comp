@@ -1,0 +1,1567 @@
+<!-- 
+Qwen3.6 35b unsloth
+46085 tokens
+476.1 t/s prompt processing / 44.8 t/s generation
+The design is impressive on the surface, does it translate to an exquisite stained glass shop? Unsure about this. 
+Hero section looks okay but you wish the floating pieces of stained glass would do something rather than just surround the name of the business.
+The last animation with the light rays going through glass is a great idea! The text is also on point, "we do not make windows. We make the light that passes through them." Great! Magnificent!
+Overall, it was a good performance.
+All links work, everything seems fine. No issues whatsoever, one shotted as well. 
+1556 lines of code
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lumière Atelier — Bespoke Stained Glass, Lyon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Karla:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --charcoal: #0a0a0c;
+  --onyx: #111115;
+  --smoke: #1a1a1f;
+  --ash: #2a2a30;
+  --slate: #6a6a72;
+  --silver: #9a9aa2;
+  --pearl: #d4d0c8;
+  --ivory: #f0ece2;
+  --gold: #c9a96e;
+  --gold-light: #ddc08a;
+}
+html {
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ash) var(--charcoal);
+}
+body {
+  background: var(--charcoal);
+  color: var(--pearl);
+  font-family: 'Karla', sans-serif;
+  font-weight: 300;
+  line-height: 1.7;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+::selection {
+  background: var(--gold);
+  color: var(--charcoal);
+}
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--charcoal); }
+::-webkit-scrollbar-thumb { background: var(--ash); border-radius: 3px; }
+/* ── Typography ── */
+h1, h2, h3, h4 {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  letter-spacing: 0.04em;
+}
+/* ── Navigation ── */
+nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  padding: 1.5rem 3rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+nav.scrolled {
+  background: rgba(10, 10, 12, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 1rem 3rem;
+  border-bottom: 1px solid rgba(201, 169, 110, 0.08);
+}
+.nav-brand {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.1rem;
+  font-weight: 400;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--pearl);
+  text-decoration: none;
+  transition: color 0.3s;
+}
+.nav-brand:hover { color: var(--gold); }
+.nav-links {
+  display: flex;
+  gap: 2.5rem;
+  list-style: none;
+}
+.nav-links a {
+  font-family: 'Karla', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--silver);
+  text-decoration: none;
+  transition: color 0.3s;
+  position: relative;
+}
+.nav-links a::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: var(--gold);
+  transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.nav-links a:hover { color: var(--pearl); }
+.nav-links a:hover::after { width: 100%; }
+/* ── Hero ── */
+#hero {
+  position: relative;
+  height: 100vh;
+  min-height: 700px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#hero-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 0%, rgba(10,10,12,0.3) 50%, rgba(10,10,12,0.7) 100%);
+  z-index: 2;
+}
+.hero-content {
+  position: relative;
+  z-index: 3;
+  text-align: center;
+  padding: 0 2rem;
+}
+.hero-eyebrow {
+  font-family: 'Karla', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 400;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 2rem;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeUp 1.2s cubic-bezier(0.22, 1, 0.36, 1) 0.5s forwards;
+}
+.hero-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(3rem, 8vw, 7.5rem);
+  font-weight: 300;
+  line-height: 1.05;
+  color: var(--ivory);
+  margin-bottom: 1.5rem;
+  opacity: 0;
+  transform: translateY(30px);
+  animation: fadeUp 1.4s cubic-bezier(0.22, 1, 0.36, 1) 0.8s forwards;
+}
+.hero-title em {
+  font-style: italic;
+  color: var(--gold-light);
+}
+.hero-subtitle {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(1.1rem, 2vw, 1.4rem);
+  font-weight: 300;
+  font-style: italic;
+  color: var(--silver);
+  max-width: 500px;
+  margin: 0 auto 3rem;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeUp 1.2s cubic-bezier(0.22, 1, 0.36, 1) 1.2s forwards;
+}
+.hero-cta {
+  display: inline-block;
+  font-family: 'Karla', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 400;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--pearl);
+  text-decoration: none;
+  padding: 1rem 2.5rem;
+  border: 1px solid rgba(201, 169, 110, 0.3);
+  transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeUp 1.2s cubic-bezier(0.22, 1, 0.36, 1) 1.6s forwards;
+}
+.hero-cta:hover {
+  background: rgba(201, 169, 110, 0.1);
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.scroll-indicator {
+  position: absolute;
+  bottom: 3rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  opacity: 0;
+  animation: fadeUp 1s cubic-bezier(0.22, 1, 0.36, 1) 2s forwards;
+}
+.scroll-line {
+  width: 1px;
+  height: 50px;
+  background: linear-gradient(to bottom, transparent, var(--gold));
+  animation: scrollPulse 2s ease-in-out infinite;
+}
+@keyframes fadeUp {
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes scrollPulse {
+  0%, 100% { opacity: 0.3; transform: scaleY(0.6); transform-origin: top; }
+  50% { opacity: 1; transform: scaleY(1); }
+}
+/* ── Sections ── */
+section {
+  padding: 8rem 3rem;
+  position: relative;
+}
+.section-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.section-label {
+  font-family: 'Karla', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 400;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+.section-label::before {
+  content: '';
+  width: 40px;
+  height: 1px;
+  background: var(--gold);
+}
+.section-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(2.2rem, 5vw, 4rem);
+  font-weight: 300;
+  line-height: 1.15;
+  color: var(--ivory);
+  margin-bottom: 2rem;
+}
+.section-text {
+  font-size: 0.95rem;
+  color: var(--silver);
+  max-width: 640px;
+  line-height: 1.9;
+}
+.section-text p + p { margin-top: 1.5rem; }
+/* Reveal animations */
+.reveal {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: all 1s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.reveal-delay-1 { transition-delay: 0.15s; }
+.reveal-delay-2 { transition-delay: 0.3s; }
+.reveal-delay-3 { transition-delay: 0.45s; }
+.reveal-delay-4 { transition-delay: 0.6s; }
+/* ── Divider ── */
+.divider {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 3rem;
+}
+.divider-line {
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(201,169,110,0.2), transparent);
+}
+/* ── Story Section ── */
+#story {
+  background: var(--charcoal);
+}
+.story-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6rem;
+  align-items: center;
+}
+.story-visual {
+  position: relative;
+  aspect-ratio: 3/4;
+  overflow: hidden;
+}
+.story-canvas {
+  width: 100%;
+  height: 100%;
+  border-radius: 2px;
+}
+.story-details { padding: 2rem 0; }
+.story-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+  margin-top: 3.5rem;
+  padding-top: 3rem;
+  border-top: 1px solid rgba(201,169,110,0.12);
+}
+.stat-number {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2.8rem;
+  font-weight: 300;
+  color: var(--gold);
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
+.stat-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--slate);
+}
+/* ── Process Section ── */
+#process {
+  background: var(--onyx);
+}
+.process-timeline {
+  margin-top: 4rem;
+  position: relative;
+}
+.process-timeline::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(to bottom, var(--gold), rgba(201,169,110,0.1));
+}
+.process-step {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 3rem;
+  padding: 3rem 0;
+  position: relative;
+}
+.process-step::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: 3.5rem;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 20px rgba(201,169,110,0.3);
+}
+.step-number {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.3rem;
+  color: var(--gold);
+  padding-top: 0.2rem;
+}
+.step-content h3 {
+  font-size: 1.6rem;
+  color: var(--ivory);
+  margin-bottom: 1rem;
+}
+.step-content p {
+  font-size: 0.9rem;
+  color: var(--silver);
+  max-width: 520px;
+  line-height: 1.9;
+}
+.step-detail {
+  margin-top: 1rem;
+  font-size: 0.78rem;
+  color: var(--slate);
+  font-style: italic;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+}
+/* ── Portfolio Section ── */
+#portfolio {
+  background: var(--charcoal);
+}
+.portfolio-grid {
+  margin-top: 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.portfolio-item {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 70vh;
+  border-top: 1px solid rgba(201,169,110,0.08);
+  transition: all 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.portfolio-item:last-child {
+  border-bottom: 1px solid rgba(201,169,110,0.08);
+}
+.portfolio-visual {
+  position: relative;
+  overflow: hidden;
+  min-height: 400px;
+}
+.portfolio-canvas {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+}
+.portfolio-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 4rem 5rem 4rem 4rem;
+}
+.portfolio-year {
+  font-family: 'Karla', sans-serif;
+  font-size: 0.65rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 1.5rem;
+}
+.portfolio-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(1.8rem, 3vw, 2.5rem);
+  font-weight: 300;
+  color: var(--ivory);
+  line-height: 1.2;
+  margin-bottom: 0.5rem;
+}
+.portfolio-location {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1rem;
+  font-style: italic;
+  color: var(--slate);
+  margin-bottom: 2rem;
+}
+.portfolio-description {
+  font-size: 0.9rem;
+  color: var(--silver);
+  line-height: 1.9;
+  max-width: 440px;
+}
+.portfolio-specs {
+  margin-top: 2rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+.spec {
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--slate);
+  padding: 0.5rem 0;
+  border-top: 1px solid rgba(201,169,110,0.15);
+}
+/* Reverse layout for even items */
+.portfolio-item:nth-child(even) .portfolio-visual { order: 2; }
+.portfolio-item:nth-child(even) .portfolio-info { order: 1; }
+/* ── Light Section ── */
+#light {
+  padding: 6rem 3rem;
+  background: var(--smoke);
+  text-align: center;
+  overflow: hidden;
+}
+.light-canvas-container {
+  position: relative;
+  width: 100%;
+  max-width: 1400px;
+  height: 50vh;
+  min-height: 350px;
+  margin: 0 auto;
+  overflow: hidden;
+}
+#light-canvas {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+}
+.light-quote {
+  position: relative;
+  z-index: 2;
+  margin-top: -3rem;
+  margin-bottom: 1rem;
+}
+.light-quote blockquote {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(1.4rem, 3vw, 2.2rem);
+  font-weight: 300;
+  font-style: italic;
+  color: var(--pearl);
+  max-width: 700px;
+  line-height: 1.5;
+  margin: 0 auto;
+}
+.light-quote cite {
+  display: block;
+  margin-top: 1.5rem;
+  font-family: 'Karla', sans-serif;
+  font-size: 0.7rem;
+  font-style: normal;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+/* ── Contact Section ── */
+#contact {
+  background: var(--onyx);
+}
+.contact-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6rem;
+  align-items: start;
+}
+.contact-form {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  margin-top: 2rem;
+}
+.form-group {
+  position: relative;
+}
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(201,169,110,0.15);
+  padding: 1rem 0;
+  font-family: 'Karla', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 300;
+  color: var(--pearl);
+  outline: none;
+  transition: border-color 0.4s;
+}
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+  color: var(--slate);
+  font-weight: 300;
+}
+.form-group input:focus,
+.form-group textarea:focus {
+  border-bottom-color: var(--gold);
+}
+.form-group textarea {
+  resize: none;
+  min-height: 120px;
+  line-height: 1.7;
+}
+.form-group .focus-line {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: var(--gold);
+  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.form-group input:focus ~ .focus-line,
+.form-group textarea:focus ~ .focus-line {
+  width: 100%;
+}
+.submit-btn {
+  display: inline-block;
+  font-family: 'Karla', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--pearl);
+  background: transparent;
+  border: 1px solid rgba(201,169,110,0.3);
+  padding: 1.1rem 3rem;
+  cursor: pointer;
+  transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  align-self: flex-start;
+  margin-top: 1rem;
+}
+.submit-btn:hover {
+  background: rgba(201,169,110,0.08);
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.contact-info {
+  padding: 2rem 0;
+}
+.contact-detail {
+  margin-bottom: 2.5rem;
+}
+.contact-detail-label {
+  font-size: 0.65rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 0.5rem;
+}
+.contact-detail-value {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.15rem;
+  color: var(--pearl);
+  line-height: 1.6;
+}
+.contact-detail-value a {
+  color: var(--pearl);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(201,169,110,0.2);
+  transition: all 0.3s;
+}
+.contact-detail-value a:hover {
+  color: var(--gold);
+  border-bottom-color: var(--gold);
+}
+/* ── Footer ── */
+footer {
+  padding: 3rem;
+  background: var(--charcoal);
+  border-top: 1px solid rgba(201,169,110,0.06);
+  text-align: center;
+}
+.footer-brand {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.9rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--slate);
+  margin-bottom: 1rem;
+}
+.footer-copy {
+  font-size: 0.7rem;
+  color: var(--ash);
+  letter-spacing: 0.1em;
+}
+/* ── Cursor ── */
+.cursor-glow {
+  position: fixed;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  background: radial-gradient(circle, rgba(201,169,110,0.04) 0%, transparent 70%);
+  transform: translate(-50%, -50%);
+  transition: opacity 0.3s;
+}
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  nav { padding: 1rem 1.5rem; }
+  .nav-links { display: none; }
+  section { padding: 5rem 1.5rem; }
+  .story-grid { grid-template-columns: 1fr; gap: 3rem; }
+  .story-visual { max-height: 50vh; }
+  .portfolio-item { grid-template-columns: 1fr; }
+  .portfolio-item:nth-child(even) .portfolio-visual { order: 0; }
+  .portfolio-item:nth-child(even) .portfolio-info { order: 0; }
+  .portfolio-info { padding: 3rem 1.5rem; }
+  .contact-grid { grid-template-columns: 1fr; gap: 3rem; }
+  .portfolio-specs { gap: 1rem; }
+  .hero-title { font-size: clamp(2.5rem, 10vw, 4rem); }
+}
+</style>
+</head>
+<body>
+<div class="cursor-glow" id="cursorGlow"></div>
+<nav id="mainNav">
+  <a href="#hero" class="nav-brand">Lumière Atelier</a>
+  <ul class="nav-links">
+    <li><a href="#story">Studio</a></li>
+    <li><a href="#process">Process</a></li>
+    <li><a href="#portfolio">Works</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+</nav>
+<section id="hero">
+  <canvas id="hero-canvas"></canvas>
+  <div class="hero-overlay"></div>
+  <div class="hero-content">
+    <p class="hero-eyebrow">Lyon · Est. 1987</p>
+    <h1 class="hero-title">Lumière<br><em>Atelier</em></h1>
+    <p class="hero-subtitle">Where light becomes glass, and glass becomes memory</p>
+    <a href="#story" class="hero-cta">Enter the Studio</a>
+  </div>
+  <div class="scroll-indicator">
+    <div class="scroll-line"></div>
+  </div>
+</section>
+<div class="divider"><div class="divider-line"></div></div>
+<section id="story">
+  <div class="section-container">
+    <div class="story-grid">
+      <div class="story-visual reveal">
+        <canvas class="story-canvas" id="story-canvas"></canvas>
+      </div>
+      <div class="story-details">
+        <p class="section-label reveal">The Studio</p>
+        <h2 class="section-title reveal reveal-delay-1">Forty years<br>of luminous craft</h2>
+        <div class="section-text reveal reveal-delay-2">
+          <p>In a converted silk workshop on the slope of fourvière, where the saône catches fire each september, bastien moreau opened a studio with nothing but a master glazier's knife, a furnace stolen from a demolished foundry, and an obsession: to make stained glass that does not merely cover a window, but transforms the very architecture of light.</p>
+          <p>Today, Lumière Atelier is a collective of twelve artisans — glass cutters, kiln painters, lead workers, and structural engineers who treat the medieval tradition not as relic but as living language. Each piece begins hours in the studio, the most unglamorous of those hours spent selecting individual sheets of rflush ruby, bohemian ruby red, or czech aquamarine from the handful of remaining European factories that still know how to blow glass by hand.</p>
+          <p>Our commissions range from private chapels to museum atriums, from the restoration of war-damaged rose windows to the creation of entirely new glazing programs for architects who understand that glass is the only material that builds in absence — a wall made of nothing but light.</p>
+        </div>
+        <div class="story-stats reveal reveal-delay-3">
+          <div>
+            <div class="stat-number">140+</div>
+            <div class="stat-label">Commissions</div>
+          </div>
+          <div>
+            <div class="stat-number">37</div>
+            <div class="stat-label">Years</div>
+          </div>
+          <div>
+            <div class="stat-number">12</div>
+            <div class="stat-label">Artisans</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<div class="divider"><div class="divider-line"></div></div>
+<section id="process">
+  <div class="section-container">
+    <p class="section-label reveal">Commission Process</p>
+    <h2 class="section-title reveal reveal-delay-1">From silence<br>to spectrum</h2>
+    <p class="section-text reveal reveal-delay-2">Every commission begins with a conversation — rarely about glass. We listen to how light moves through your space at different hours of the day, what memories are attached to that architecture, what the building was meant to make you feel. The glass follows from that listening.</p>
+    <div class="process-timeline reveal reveal-delay-3">
+      <div class="process-step">
+        <div class="step-number">I.</div>
+        <div class="step-content">
+          <h3>Consultation & Light Study</h3>
+          <p>We visit your site at dawn, noon, and dusk — three visits, three different conversations about the same space. We photograph the light. We map the seasonal path of the sun. We take measurements to the millimeter and notes to the heart.</p>
+          <div class="step-detail">Typically 2–3 site visits over a three-week period</div>
+        </div>
+      </div>
+      <div class="process-step">
+        <div class="step-number">II.</div>
+        <div class="step-content">
+          <h3>Design & Full-Scale Cartoon</h3>
+          <p>Our design team — always working by hand — produces a full-scale cartoon on the studio floor. This is the traditional method: the drawing that is the size of the window itself. Every color is tried. Every sheet of glass is held up to the light. The design lives and changes on the floor until it finds its own truth.</p>
+          <div class="step-detail">8–12 weeks of iterative design, including three client review stages</div>
+        </div>
+      </div>
+      <div class="process-step">
+        <div class="step-number">III.</div>
+        <div class="step-content">
+          <h3>Cutting, Painting & Firing</h3>
+          <p>The glass is cut by hand — never by machine — using a three-hundred-year-old technique of scoring and breaking that preserves the natural tension of the sheet. Surface painting is executed in the old manner: iron oxide ground in gum arabic, fired in our vertical kilns at 780 degrees. A single window requires forty to sixty firings, each one a small act of faith.</p>
+          <div class="step-detail">The most time-intensive phase. 12–20 weeks depending on complexity</div>
+        </div>
+      </div>
+      <div class="process-step">
+        <div class="step-number">IV.</div>
+        <div class="step-content">
+          <h3>Leadwork & Armature</h3>
+          <p>Each piece is outlined in h-shaped lead came, the joints soldered with a tin-phosphorus alloy that will not corrode. Behind the glass, a structural armature of hand-forged steel and bronze carries the weight. The glass is never structural — never asked to hold up what it was never meant to hold.</p>
+          <div class="step-detail">Every armature designed for a minimum 200-year service life</div>
+        </div>
+      </div>
+      <div class="process-step">
+        <div class="step-number">V.</div>
+        <div class="step-content">
+          <h3>Installation & Commissioning</h3>
+          <p>Our installation team — who have hung glass on cathedrals in Alsace, private libraries in London, and museum facades in Tokyo — works in silence. The glass arrives in custom crates lined with unbleached cotton. It is fitted, checked, and sealed. Then the scaffolding comes down. Then the light does the rest.</p>
+          <div class="step-detail">Installation typically 2–4 weeks. Full commissioning over 6 months as seasons turn</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<div class="divider"><div class="divider-line"></div></div>
+<section id="portfolio">
+  <div class="section-container">
+    <p class="section-label reveal">Selected Works</p>
+    <h2 class="section-title reveal reveal-delay-1">A body of light</h2>
+  </div>
+  <div class="portfolio-grid">
+    <div class="portfolio-item">
+      <div class="portfolio-visual">
+        <canvas class="portfolio-canvas" id="pf-canvas-0"></canvas>
+      </div>
+      <div class="portfolio-info">
+        <span class="portfolio-year reveal">2023</span>
+        <h3 class="portfolio-name reveal reveal-delay-1">The Chapel of the Unnamed</h3>
+        <p class="portfolio-location reveal reveal-delay-2">Saint-Maurice, Haute-Savoie</p>
+        <p class="portfolio-description reveal reveal-delay-3">A glazing program for a rebuilt rural chapel, composed entirely of hand-blown glass in eighty-seven distinct shades of blue — from the palest copenhague to the deepest bohemian sapphire — arranged to shift with the hours, so that by vespers the interior exists in a light indistinguishable from the color of prayer.</p>
+        <div class="portfolio-specs reveal reveal-delay-4">
+          <span class="spec">12 panels</span>
+          <span class="spec">Hand-blown crown glass</span>
+          <span class="spec">Bronze armature</span>
+        </div>
+      </div>
+    </div>
+    <div class="portfolio-item">
+      <div class="portfolio-visual">
+        <canvas class="portfolio-canvas" id="pf-canvas-1"></canvas>
+      </div>
+      <div class="portfolio-info">
+        <span class="portfolio-year reveal">2022</span>
+        <h3 class="portfolio-name reveal reveal-delay-1">Fracture & Bloom</h3>
+        <p class="portfolio-location reveal reveal-delay-2">Musée d'Art Contemporain, Lyon</p>
+        <p class="portfolio-description reveal reveal-delay-3">A double-skin curtain wall separating the museum's main atrium from the new sculpture garden. The inner layer is fractured cobalt; the outer, warm amber. Between them, a three-centimetre air gap where dust and insects and rain create an ever-shifting third layer — a living glaze the size of a building.</p>
+        <div class="portfolio-specs reveal reveal-delay-4">
+          <span class="spec">48m²</span>
+          <span class="spec">Double-skin system</span>
+          <span class="spec">Structural silicone</span>
+        </div>
+      </div>
+    </div>
+    <div class="portfolio-item">
+      <div class="portfolio-visual">
+        <canvas class="portfolio-canvas" id="pf-canvas-2"></canvas>
+      </div>
+      <div class="portfolio-info">
+        <span class="portfolio-year reveal">2021</span>
+        <h3 class="portfolio-name reveal reveal-delay-1">Response in Vermilion</h3>
+        <p class="portfolio-location reveal reveal-delay-2">Holocaust Memorial Library, Strasbourg</p>
+        <p class="portfolio-description reveal reveal-delay-3">Commissioned by Survivors of the Shoah Voice Foundation, this window responds to a single testimony — a woman's account of walking past the painted shutters of a neighbour's house one spring morning in 1944, noting only that the shutters were closed, and would not be opened again. The glass is rendered in the exact vermilion the woman describes.</p>
+        <div class="portfolio-specs reveal reveal-delay-4">
+          <span class="spec">Single panel, 6m tall</span>
+          <span class="spec">Kiln-painted ruby glass</span>
+          <span class="spec">Steel armature</span>
+        </div>
+      </div>
+    </div>
+    <div class="portfolio-item">
+      <div class="portfolio-visual">
+        <canvas class="portfolio-canvas" id="pf-canvas-3"></canvas>
+      </div>
+      <div class="portfolio-info">
+        <span class="portfolio-year reveal">2020</span>
+        <h3 class="portfolio-name reveal reveal-delay-1">The Tide Room</h3>
+        <p class="portfolio-location reveal reveal-delay-2">Private Residence, Étretat</p>
+        <p class="portfolio-description reveal reveal-delay-3">A circular dining room on the fifth floor of a clifftown residence, entirely glazed in a spiral of approximately four thousand individual glass tesserae — each the colour and translucency of sea-glass collected from a single beach on the normandy coast. At night, the interior becomes a submerged world.</p>
+        <div class="portfolio-specs reveal reveal-delay-4">
+          <span class="spec">~4,000 tesserae</span>
+          <span class="spec">Sea-glass patina technique</span>
+          <span class="spec">Circular geometry</span>
+        </div>
+      </div>
+    </div>
+    <div class="portfolio-item">
+      <div class="portfolio-visual">
+        <canvas class="portfolio-canvas" id="pf-canvas-4"></canvas>
+      </div>
+      <div class="portfolio-info">
+        <span class="portfolio-year reveal">2019</span>
+        <h3 class="portfolio-name reveal reveal-delay-1">Canticle of the Northern Light</h3>
+        <p class="portfolio-location reveal reveal-delay-2">Concert Hall Extension, Lille</p>
+        <p class="portfolio-description reveal reveal-delay-3">A 14-metre nave window for a concert hall's new recital space, composed of hand-blown opal glass panels that reproduce, in colour and texture, the aurora borealis as seen from the northern tip of the réunion island — where the artist grew up. The effect is not representation but translation: light translated into light.</p>
+        <div class="portfolio-specs reveal reveal-delay-4">
+          <span class="spec">14m × 4m</span>
+          <span class="spec">Hand-blown opal glass</span>
+          <span class="spec">Reinforced concrete substructure</span>
+        </div>
+      </div>
+    </div>
+    <div class="portfolio-item">
+      <div class="portfolio-visual">
+        <canvas class="portfolio-canvas" id="pf-canvas-5"></canvas>
+      </div>
+      <div class="portfolio-info">
+        <span class="portfolio-year reveal">2018</span>
+        <h3 class="portfolio-name reveal reveal-delay-1">The Garden of Faded Things</h3>
+        <p class="portfolio-location reveal reveal-delay-2">Jardin des Plantes, Paris</p>
+        <p class="portfolio-description reveal reveal-delay-3">A series of six rose windows for the entrance pavilion of the botanical garden, each depicting a botanical motif not through representation but through the inherent morphology of the glass itself — the seed-pod form of bohemian ruby, the fractured translucency of chevron glass, the pooling depth of czech emerald. Nature, refracted.</p>
+        <div class="portfolio-specs reveal reveal-delay-4">
+          <span class="spec">6 rose windows</span>
+          <span class="spec">Mixed European glass</span>
+          <span class="spec">Traditional lead came</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<div class="divider"><div class="divider-line"></div></div>
+<section id="light">
+  <div class="light-canvas-container">
+    <canvas id="light-canvas"></canvas>
+  </div>
+  <div class="light-quote">
+    <blockquote>
+      "We do not make windows. We make the light that passes through them."
+    </blockquote>
+    <cite>Bastien Moreau, Founder</cite>
+  </div>
+</section>
+<div class="divider"><div class="divider-line"></div></div>
+<section id="contact">
+  <div class="section-container">
+    <div class="contact-grid">
+      <div>
+        <p class="section-label reveal">Contact</p>
+        <h2 class="section-title reveal reveal-delay-1">Begin a<br>conversation</h2>
+        <p class="section-text reveal reveal-delay-2">We accept a maximum of four commissions per year to preserve the depth of attention each project requires. Inquiries are reviewed by Bastien himself. Response time is typically two to three weeks.</p>
+        <form class="contact-form reveal reveal-delay-3" onsubmit="event.preventDefault();">
+          <div class="form-group">
+            <input type="text" placeholder="Your name" required>
+            <div class="focus-line"></div>
+          </div>
+          <div class="form-group">
+            <input type="email" placeholder="Email address" required>
+            <div class="focus-line"></div>
+          </div>
+          <div class="form-group">
+            <input type="text" placeholder="Project type and location">
+            <div class="focus-line"></div>
+          </div>
+          <div class="form-group">
+            <textarea placeholder="Tell us about the light in your space"></textarea>
+            <div class="focus-line"></div>
+          </div>
+          <button type="submit" class="submit-btn">Send Inquiry</button>
+        </form>
+      </div>
+      <div class="contact-info reveal reveal-delay-2">
+        <div class="contact-detail">
+          <div class="contact-detail-label">Atelier</div>
+          <div class="contact-detail-value">
+            14 Rue Guynemer<br>
+            69005 Lyon, France
+          </div>
+        </div>
+        <div class="contact-detail">
+          <div class="contact-detail-label">Telephone</div>
+          <div class="contact-detail-value">
+            <a href="tel:+33472000000">+33 4 72 00 00 00</a>
+          </div>
+        </div>
+        <div class="contact-detail">
+          <div class="contact-detail-label">Email</div>
+          <div class="contact-detail-value">
+            <a href="mailto:atelier@lumiere-stainedglass.fr">atelier@lumiere-stainedglass.fr</a>
+          </div>
+        </div>
+        <div class="contact-detail">
+          <div class="contact-detail-label">By Appointments Only</div>
+          <div class="contact-detail-value" style="color: var(--slate); font-family: 'Karla', sans-serif; font-size: 0.85rem; font-weight: 300;">
+            Studio visits by arrangement.<br>
+            Please inquire in writing.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<footer>
+  <div class="footer-brand">Lumière Atelier</div>
+  <div class="footer-copy">© 2024 Lumière Atelier. All rights reserved. Lyon, France.</div>
+</footer>
+<script>
+// ── Cursor Glow ──
+const glow = document.getElementById('cursorGlow');
+let mouseX = -300, mouseY = -300;
+let glowX = -300, glowY = -300;
+document.addEventListener('mousemove', e => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+});
+function animateGlow() {
+  glowX += (mouseX - glowX) * 0.08;
+  glowY += (mouseY - glowY) * 0.08;
+  glow.style.left = glowX + 'px';
+  glow.style.top = glowY + 'px';
+  requestAnimationFrame(animateGlow);
+}
+animateGlow();
+// ── Nav Scroll ──
+const nav = document.getElementById('mainNav');
+window.addEventListener('scroll', () => {
+  nav.classList.toggle('scrolled', window.scrollY > 80);
+});
+// ── Reveal on Scroll ──
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+// ═══════════════════════════════════════════════════
+// THREE.JS — Hero Stained Glass Scene
+// ═══════════════════════════════════════════════════
+(function() {
+  const canvas = document.getElementById('hero-canvas');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
+  camera.position.set(0, 0, 5);
+  // Stained glass panel geometry — gothic arch shape
+  function createStainedGlassPanel(w, h, depth, colors, opacity) {
+    const geo = new THREE.PlaneGeometry(w, h, 1, 1);
+    const mat = new THREE.MeshPhysicalMaterial({
+      color: new THREE.Color(colors),
+      metalness: 0.0,
+      roughness: 0.15,
+      transmission: opacity,
+      thickness: depth,
+      ior: 1.52,
+      transparent: true,
+      opacity: 0.85,
+      side: THREE.DoubleSide,
+    });
+    return new THREE.Mesh(geo, mat);
+  }
+  // Create a group of stained glass panels forming a gothic window
+  const windowGroup = new THREE.Group();
+  const panelCount = 40;
+  const panelPalette = [
+    [0.85, 0.2, 0.15],   // ruby red
+    [0.1, 0.25, 0.7],    // cobalt blue
+    [0.1, 0.55, 0.3],    // emerald green
+    [0.9, 0.7, 0.15],    // gold/amber
+    [0.6, 0.15, 0.6],    // amethyst
+    [0.15, 0.6, 0.7],    // aquamarine
+    [0.95, 0.85, 0.6],   // warm white
+    [0.8, 0.35, 0.1],    // orange/rust
+    [0.2, 0.15, 0.5],    // violet
+  ];
+  // Arrange panels in a gothic arch pattern
+  for (let i = 0; i < panelCount; i++) {
+    const angle = (i / panelCount) * Math.PI;
+    const radius = 1.8 + Math.sin(angle) * 0.3;
+    const x = Math.cos(angle) * radius * 1.2;
+    const y = Math.sin(angle) * radius * 1.6 - 0.2;
+    const size = 0.15 + Math.random() * 0.25;
+    const panel = createStainedGlassPanel(
+      size * (0.7 + Math.random() * 0.6),
+      size * (0.7 + Math.random() * 0.6),
+      0.02,
+      panelPalette[Math.floor(Math.random() * panelPalette.length)],
+      0.4 + Math.random() * 0.4
+    );
+    panel.position.set(
+      x + (Math.random() - 0.5) * 0.3,
+      y + (Math.random() - 0.5) * 0.2,
+      Math.random() * 0.05
+    );
+    panel.rotation.z = Math.random() * 0.15 - 0.075;
+    panel.userData = { baseY: panel.position.y, phase: Math.random() * Math.PI * 2, speed: 0.3 + Math.random() * 0.5 };
+    windowGroup.add(panel);
+  }
+  // Add some foreground panels for depth
+  for (let i = 0; i < 15; i++) {
+    const size = 0.08 + Math.random() * 0.15;
+    const panel = createStainedGlassPanel(size, size, 0.01,
+      panelPalette[Math.floor(Math.random() * panelPalette.length)],
+      0.3 + Math.random() * 0.3
+    );
+    panel.position.set(
+      (Math.random() - 0.5) * 5,
+      (Math.random() - 0.5) * 4,
+      -1.5 - Math.random() * 2
+    );
+    panel.rotation.z = Math.random() * Math.PI;
+    panel.rotation.x = (Math.random() - 0.5) * 0.3;
+    panel.userData = { baseY: panel.position.y, phase: Math.random() * Math.PI * 2, speed: 0.2 + Math.random() * 0.3 };
+    windowGroup.add(panel);
+  }
+  scene.add(windowGroup);
+  // Light rays / particles
+  const particleCount = 200;
+  const particleGeo = new THREE.BufferGeometry();
+  const positions = new Float32Array(particleCount * 3);
+  const colors = new Float32Array(particleCount * 3);
+  const sizes = new Float32Array(particleCount);
+  for (let i = 0; i < particleCount; i++) {
+    positions[i * 3] = (Math.random() - 0.5) * 8;
+    positions[i * 3 + 1] = (Math.random() - 0.5) * 6;
+    positions[i * 3 + 2] = (Math.random() - 0.5) * 6;
+    const c = new THREE.Color(panelPalette[Math.floor(Math.random() * panelPalette.length)]);
+    colors[i * 3] = c.r;
+    colors[i * 3 + 1] = c.g;
+    colors[i * 3 + 2] = c.b;
+    sizes[i] = 0.02 + Math.random() * 0.06;
+  }
+  particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  particleGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  particleGeo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+  const particleMat = new THREE.PointsMaterial({
+    size: 0.04,
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.6,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    sizeAttenuation: true,
+  });
+  const particles = new THREE.Points(particleGeo, particleMat);
+  scene.add(particles);
+  // Ambient point lights
+  const light1 = new THREE.PointLight(0xffd4a0, 0.8, 15);
+  light1.position.set(2, 3, 4);
+  scene.add(light1);
+  const light2 = new THREE.PointLight(0x88aaff, 0.5, 15);
+  light2.position.set(-3, -2, 3);
+  scene.add(light2);
+  // Mouse tracking for parallax
+  let targetRotX = 0, targetRotY = 0;
+  let currentRotX = 0, currentRotY = 0;
+  document.addEventListener('mousemove', e => {
+    targetRotX = (e.clientY / window.innerHeight - 0.5) * 0.3;
+    targetRotY = (e.clientX / window.innerWidth - 0.5) * 0.3;
+  });
+  // Animation loop
+  let time = 0;
+  function animate() {
+    requestAnimationFrame(animate);
+    time += 0.005;
+    currentRotX += (targetRotX - currentRotX) * 0.03;
+    currentRotY += (targetRotY - currentRotY) * 0.03;
+    windowGroup.rotation.x = currentRotX;
+    windowGroup.rotation.y = currentRotY;
+    // Animate individual panels
+    windowGroup.children.forEach(panel => {
+      if (panel.userData.speed) {
+        panel.position.y = panel.userData.baseY + Math.sin(time * panel.userData.speed + panel.userData.phase) * 0.03;
+      }
+    });
+    // Animate particles
+    const pos = particles.geometry.attributes.position.array;
+    for (let i = 0; i < particleCount; i++) {
+      pos[i * 3 + 1] += 0.003;
+      if (pos[i * 3 + 1] > 3) pos[i * 3 + 1] = -3;
+      pos[i * 3] += Math.sin(time + i) * 0.001;
+    }
+    particles.geometry.attributes.position.needsUpdate = true;
+    particles.rotation.y = time * 0.02;
+    // Animate lights
+    light1.intensity = 0.8 + Math.sin(time * 2) * 0.15;
+    light2.intensity = 0.5 + Math.cos(time * 1.5) * 0.1;
+    renderer.render(scene, camera);
+  }
+  animate();
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+})();
+// ═══════════════════════════════════════════════════
+// THREE.JS — Story Section Visual
+// ═══════════════════════════════════════════════════
+(function() {
+  const canvas = document.getElementById('story-canvas');
+  if (!canvas) return;
+  const container = canvas.parentElement;
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  function resize() {
+    const w = container.offsetWidth;
+    const h = container.offsetHeight;
+    renderer.setSize(w, h);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(45, container.offsetWidth / container.offsetHeight, 0.1, 50);
+  camera.position.set(0, 0, 5);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+  const light = new THREE.DirectionalLight(0xffeedd, 1.2);
+  light.position.set(2, 3, 4);
+  scene.add(light);
+  // Create a circular mandala-like stained glass pattern
+  const group = new THREE.Group();
+  const petals = 12;
+  const rings = 4;
+  const colors = [0x8B2252, 0x1B3F8F, 0x1B8F4F, 0xB8860B, 0x6B1B8F, 0x1B8F8F, 0xD4602A, 0x8F4B1B];
+  for (let ring = 0; ring < rings; ring++) {
+    const innerR = 0.3 + ring * 0.45;
+    const outerR = innerR + 0.4;
+    const segments = petals * (ring + 1);
+    for (let i = 0; i < segments; i++) {
+      const angle = (i / segments) * Math.PI * 2;
+      const nextAngle = ((i + 1) / segments) * Math.PI * 2;
+      const shape = new THREE.Shape();
+      const midR = (innerR + outerR) / 2;
+      const width = (outerR - innerR) * 0.95;
+      const x1 = Math.cos(angle) * innerR;
+      const y1 = Math.sin(angle) * innerR;
+      const x2 = Math.cos(nextAngle) * innerR;
+      const y2 = Math.sin(nextAngle) * innerR;
+      const x3 = Math.cos(nextAngle) * outerR;
+      const y3 = Math.sin(nextAngle) * outerR;
+      const x4 = Math.cos(angle) * outerR;
+      const y4 = Math.sin(angle) * outerR;
+      shape.moveTo(x1, y1);
+      shape.quadraticCurveTo((x2 + x1) / 2 * 1.1, (y2 + y1) / 2 * 1.1, x2, y2);
+      shape.lineTo(x3, y3);
+      shape.quadraticCurveTo((x3 + x4) / 2 * 1.1, (y3 + y4) / 2 * 1.1, x4, y4);
+      shape.lineTo(x1, y1);
+      const geo = new THREE.ShapeGeometry(shape);
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      const mat = new THREE.MeshPhysicalMaterial({
+        color: color,
+        metalness: 0.0,
+        roughness: 0.2,
+        transmission: 0.5,
+        thickness: 0.02,
+        ior: 1.52,
+        transparent: true,
+        opacity: 0.8,
+        side: THREE.DoubleSide,
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.userData = { phase: Math.random() * Math.PI * 2, speed: 0.2 + Math.random() * 0.3 };
+      group.add(mesh);
+    }
+  }
+  // Lead lines (thin dark lines between panels)
+  const leadMat = new THREE.LineBasicMaterial({ color: 0x111111, linewidth: 1 });
+  for (let ring = 0; ring <= rings; ring++) {
+    const r = 0.3 + ring * 0.45;
+    const points = [];
+    const segs = 60;
+    for (let i = 0; i <= segs; i++) {
+      const a = (i / segs) * Math.PI * 2;
+      points.push(new THREE.Vector3(Math.cos(a) * r, Math.sin(a) * r, 0.001));
+    }
+    const leadGeo = new THREE.BufferGeometry().setFromPoints(points);
+    group.add(new THREE.Line(leadGeo, leadMat));
+  }
+  scene.add(group);
+  resize();
+  let time = 0;
+  function animate() {
+    requestAnimationFrame(animate);
+    time += 0.003;
+    group.rotation.z = time * 0.15;
+    group.rotation.x = Math.sin(time * 0.5) * 0.05;
+    renderer.render(scene, camera);
+  }
+  animate();
+  window.addEventListener('resize', resize);
+  // Observe visibility
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => { e.target.dataset.v = e.isIntersecting ? '1' : '0'; });
+  }, { threshold: 0 });
+  obs.observe(container);
+})();
+// ═══════════════════════════════════════════════════
+// THREE.JS — Light Section Full-Width Scene
+// ═══════════════════════════════════════════════════
+(function() {
+  const canvas = document.getElementById('light-canvas');
+  if (!canvas) return;
+  const container = canvas.parentElement;
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  function resize() {
+    const w = container.offsetWidth;
+    const h = container.offsetHeight;
+    renderer.setSize(w, h);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x0a0a0c, 0.06);
+  const camera = new THREE.PerspectiveCamera(60, container.offsetWidth / container.offsetHeight, 0.1, 100);
+  camera.position.set(0, 0, 4);
+  // Volumetric light cones
+  const coneColors = [0xff6b35, 0x4ecdc4, 0xa855f7, 0xf59e0b, 0x3b82f6, 0xef4444];
+  const cones = [];
+  for (let i = 0; i < 6; i++) {
+    const geo = new THREE.ConeGeometry(0.3 + Math.random() * 0.5, 6 + Math.random() * 3, 8, 1, true);
+    const mat = new THREE.MeshBasicMaterial({
+      color: coneColors[i],
+      transparent: true,
+      opacity: 0.04 + Math.random() * 0.04,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    const cone = new THREE.Mesh(geo, mat);
+    cone.position.set(
+      (Math.random() - 0.5) * 5,
+      1 + Math.random() * 2,
+      -2 - Math.random() * 3
+    );
+    cone.rotation.z = (Math.random() - 0.5) * 0.4;
+    cone.rotation.x = (Math.random() - 0.5) * 0.2;
+    cone.userData = { speed: 0.1 + Math.random() * 0.2, phase: Math.random() * Math.PI * 2 };
+    scene.add(cone);
+    cones.push(cone);
+  }
+  // Floating prismatic shards
+  const shardCount = 80;
+  const shardGeo = new THREE.BufferGeometry();
+  const shardPos = new Float32Array(shardCount * 3);
+  const shardCol = new Float32Array(shardCount * 3);
+  for (let i = 0; i < shardCount; i++) {
+    shardPos[i * 3] = (Math.random() - 0.5) * 8;
+    shardPos[i * 3 + 1] = (Math.random() - 0.5) * 5;
+    shardPos[i * 3 + 2] = (Math.random() - 0.5) * 6 - 1;
+    const c = new THREE.Color(coneColors[Math.floor(Math.random() * coneColors.length)]);
+    shardCol[i * 3] = c.r;
+    shardCol[i * 3 + 1] = c.g;
+    shardCol[i * 3 + 2] = c.b;
+  }
+  shardGeo.setAttribute('position', new THREE.BufferAttribute(shardPos, 3));
+  shardGeo.setAttribute('color', new THREE.BufferAttribute(shardCol, 3));
+  const shardMat = new THREE.PointsMaterial({
+    size: 0.03,
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.7,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  const shards = new THREE.Points(shardGeo, shardMat);
+  scene.add(shards);
+  // Point lights
+  const pl1 = new THREE.PointLight(0xff8844, 0.6, 10);
+  pl1.position.set(0, 2, 3);
+  scene.add(pl1);
+  const pl2 = new THREE.PointLight(0x4488ff, 0.4, 10);
+  pl2.position.set(-2, -1, 2);
+  scene.add(pl2);
+  resize();
+  let time = 0;
+  function animate() {
+    requestAnimationFrame(animate);
+    time += 0.004;
+    cones.forEach((cone, i) => {
+      cone.rotation.z = Math.sin(time * cone.userData.speed + cone.userData.phase) * 0.15;
+      cone.material.opacity = 0.03 + Math.sin(time * 0.5 + i) * 0.02;
+    });
+    const sPos = shards.geometry.attributes.position.array;
+    for (let i = 0; i < shardCount; i++) {
+      sPos[i * 3 + 1] += Math.sin(time + i * 0.5) * 0.002;
+      sPos[i * 3] += Math.cos(time * 0.5 + i * 0.3) * 0.001;
+    }
+    shards.geometry.attributes.position.needsUpdate = true;
+    shards.rotation.y = time * 0.05;
+    pl1.intensity = 0.6 + Math.sin(time * 1.5) * 0.2;
+    pl2.intensity = 0.4 + Math.cos(time * 1.2) * 0.15;
+    renderer.render(scene, camera);
+  }
+  animate();
+  window.addEventListener('resize', resize);
+})();
+// ═══════════════════════════════════════════════════
+// THREE.JS — Portfolio Visualizations
+// ═══════════════════════════════════════════════════
+const portfolioConfigs = [
+  { // Chapel of the Unnamed — shades of blue
+    colors: [0x0a1a5e, 0x1a3a8e, 0x2a5abe, 0x3a7ade, 0x4a9aee, 0x5abaff, 0x0a0a4e, 0x1a2a7e, 0x2a4aae, 0x3a6ace],
+    pattern: 'vertical',
+    bg: 0x050510,
+  },
+  { // Fracture & Bloom — cobalt + amber double
+    colors: [0x0a1a8e, 0x1a2a9e, 0xcc7722, 0xdd8833, 0xee9944, 0x2244bb, 0x3355cc, 0x110066],
+    pattern: 'split',
+    bg: 0x08080f,
+  },
+  { // Response in Vermilion — single red panel
+    colors: [0x8b0000, 0xaa1111, 0xcc2222, 0xdd3333, 0xee4444, 0xff5555, 0x660000, 0x991111, 0xbb2222],
+    pattern: 'tall',
+    bg: 0x0a0505,
+  },
+  { // The Tide Room — sea glass circles
+    colors: [0x4a8a7a, 0x5a9a8a, 0x6aaaba, 0x7abaca, 0x8acada, 0x3a7a6a, 0x5a8a9a, 0x7aa0a0, 0x9ab0c0, 0xb0c0d0],
+    pattern: 'circular',
+    bg: 0x050a0a,
+  },
+  { // Canticle of Northern Light — aurora
+    colors: [0x00ff88, 0x00ddaa, 0x00bbcc, 0x22aaff, 0x4488ff, 0x6666dd, 0x8844cc, 0xaa22aa, 0x00ff66, 0x00ccbb],
+    pattern: 'aurora',
+    bg: 0x03050a,
+  },
+  { // Garden of Faded Things — botanical
+    colors: [0x2d5a1e, 0x3d7a2e, 0x4d9a3e, 0x5dba4e, 0x6dca5e, 0x8b4513, 0x9b5523, 0xab6533, 0x4a7a3a, 0x6a9a5a],
+    pattern: 'rose',
+    bg: 0x050a05,
+  },
+];
+portfolioConfigs.forEach((config, idx) => {
+  const canvas = document.getElementById(`pf-canvas-${idx}`);
+  if (!canvas) return;
+  const container = canvas.parentElement;
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  function resize() {
+    const w = container.offsetWidth;
+    const h = container.offsetHeight;
+    renderer.setSize(w, h);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(config.bg);
+  const camera = new THREE.PerspectiveCamera(50, container.offsetWidth / container.offsetHeight, 0.1, 50);
+  camera.position.set(0, 0, 4);
+  const group = new THREE.Group();
+  const brightness = (hex, factor) => {
+    const r = ((hex >> 16) & 0xff) * factor;
+    const g = ((hex >> 8) & 0xff) * factor;
+    const b = (hex & 0xff) * factor;
+    return new THREE.Color(r / 255, g / 255, b / 255);
+  };
+  // Generate pattern based on config
+  const numPanels = 25 + idx * 8;
+  for (let i = 0; i < numPanels; i++) {
+    let x, y, w, h, rot;
+    switch (config.pattern) {
+      case 'vertical': {
+        const col = i % 5;
+        const row = Math.floor(i / 5);
+        x = (col - 2) * 0.45 + (Math.random() - 0.5) * 0.05;
+        y = (row - 2) * 0.45 + (Math.random() - 0.5) * 0.05;
+        w = 0.35 + Math.random() * 0.05;
+        h = 0.35 + Math.random() * 0.05;
+        rot = 0;
+        break;
+      }
+      case 'split': {
+        const side = i < numPanels / 2 ? -1 : 1;
+        const pos = Math.random();
+        x = side * (0.1 + pos * 1.2);
+        y = (Math.random() - 0.5) * 3.5;
+        w = 0.3 + Math.random() * 0.2;
+        h = 0.3 + Math.random() * 0.2;
+        rot = side * (Math.random() - 0.5) * 0.1;
+        break;
+      }
+      case 'tall': {
+        const row = Math.floor(i / 4);
+        const col = i % 4;
+        x = (col - 1.5) * 0.45;
+        y = (row - 3) * 0.45;
+        w = 0.3 + Math.random() * 0.1;
+        h = 0.3 + Math.random() * 0.1;
+        rot = 0;
+        break;
+      }
+      case 'circular': {
+        const angle = Math.random() * Math.PI * 2;
+        const r = Math.random() * 2;
+        x = Math.cos(angle) * r;
+        y = Math.sin(angle) * r;
+        w = 0.15 + Math.random() * 0.15;
+        h = 0.15 + Math.random() * 0.15;
+        rot = angle;
+        break;
+      }
+      case 'aurora': {
+        const t = i / numPanels;
+        x = (Math.random() - 0.5) * 4;
+        y = Math.sin(t * Math.PI) * 2 + (Math.random() - 0.5) * 1.5;
+        w = 0.3 + Math.random() * 0.3;
+        h = 0.15 + Math.random() * 0.1;
+        rot = (Math.random() - 0.5) * 0.3;
+        break;
+      }
+      case 'rose': {
+        const angle = (i / numPanels) * Math.PI * 2 + (i % 3) * 0.2;
+        const r = (i % 3 + 1) * 0.5 + Math.random() * 0.1;
+        x = Math.cos(angle) * r;
+        y = Math.sin(angle) * r;
+        w = 0.25 + Math.random() * 0.1;
+        h = 0.25 + Math.random() * 0.1;
+        rot = angle + Math.PI / 2;
+        break;
+      }
+      default: {
+        x = (Math.random() - 0.5) * 3;
+        y = (Math.random() - 0.5) * 3;
+        w = 0.3;
+        h = 0.3;
+        rot = 0;
+      }
+    }
+    const color = config.colors[Math.floor(Math.random() * config.colors.length)];
+    const geo = new THREE.PlaneGeometry(w, h);
+    const mat = new THREE.MeshPhysicalMaterial({
+      color: brightness(color, 0.8 + Math.random() * 0.4),
+      metalness: 0.0,
+      roughness: 0.2,
+      transmission: 0.4 + Math.random() * 0.3,
+      thickness: 0.01,
+      ior: 1.52,
+      transparent: true,
+      opacity: 0.7 + Math.random() * 0.2,
+      side: THREE.DoubleSide,
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(x, y, (Math.random() - 0.5) * 0.1);
+    mesh.rotation.z = rot;
+    mesh.userData = { phase: Math.random() * Math.PI * 2, speed: 0.1 + Math.random() * 0.3 };
+    group.add(mesh);
+  }
+  // Lead lines
+  const leadMat = new THREE.LineBasicMaterial({ color: 0x111111, transparent: true, opacity: 0.6 });
+  scene.add(group);
+  // Light
+  const ambLight = new THREE.AmbientLight(0xffffff, 0.3);
+  scene.add(ambLight);
+  const dirLight = new THREE.DirectionalLight(0xffeedd, 1.0);
+  dirLight.position.set(1, 2, 3);
+  scene.add(dirLight);
+  resize();
+  let time = 0;
+  function animate() {
+    requestAnimationFrame(animate);
+    time += 0.003;
+    group.rotation.z = Math.sin(time * 0.2) * 0.03;
+    group.children.forEach(child => {
+      if (child.userData.speed) {
+        child.position.z += Math.sin(time * child.userData.speed + child.userData.phase) * 0.0005;
+      }
+    });
+    renderer.render(scene, camera);
+  }
+  animate();
+  window.addEventListener('resize', resize);
+});
+// ═══════════════════════════════════════════════════
+// Smooth Scroll
+// ═══════════════════════════════════════════════════
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+  anchor.addEventListener('click', function(e) {
+    e.preventDefault();
+    const target = document.querySelector(this.getAttribute('href'));
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+});
+</script>
+</body>
+</html>

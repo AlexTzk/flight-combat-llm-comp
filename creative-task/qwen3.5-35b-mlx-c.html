@@ -1,0 +1,1178 @@
+<!--
+Qwen3.5 35b MLX-Community
+This model has generated the website in french, i am not against it. It wasn't included in the prompt and the french are proud people so I can see where the model might be infering that from.  
+Judging from the content, it hasn't exceeded any expectations but it hasn't dissappointed either. 
+It's somewhere in the middle, not amazing, not rubbish either, nothing to write home aobut. 
+
+It was fast and it finished it in 31965 tokens
+1168 lines
+512.4 t/s prompt processing 49.5 t/s generation 
+-->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumière Atelier — Bespoke Stained Glass</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Playfair+Display:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --color-gold: #B88A44;
+            --color-gold-light: #D4AF68;
+            --color-gold-dark: #8B6B2E;
+            --color-amber: #C88A3A;
+            --color-cobalt: #1E3A5F;
+            --color-cobalt-light: #2C4A6F;
+            --color-emerald: #0D4D3E;
+            --color-crimson: #8B1E3E;
+            --color-violet: #4A2C5A;
+            --color-charcoal: #1A1A1A;
+            --color-charcoal-light: #2D2D2D;
+            --color-ivory: #F5F1E8;
+            --color-ivory-dark: #E8E4D8;
+            --color-silver: #C0C0C0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            font-size: 18px;
+            line-height: 1.8;
+            color: var(--color-ivory);
+            background: var(--color-charcoal);
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Preloader */
+        .preloader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--color-charcoal);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 1.5s ease, visibility 1.5s ease;
+        }
+
+        .preloader.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .preloader-logo {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 3rem;
+            background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-light) 50%, var(--color-gold) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 0.1em;
+            margin-bottom: 2rem;
+            opacity: 0;
+            animation: fadeInUp 1s ease forwards 0.3s;
+        }
+
+        .preloader-progress {
+            width: 200px;
+            height: 1px;
+            background: var(--color-charcoal-light);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .preloader-progress-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background: linear-gradient(90deg, var(--color-gold), var(--color-gold-light));
+            width: 0;
+            transition: width 1.5s ease;
+        }
+
+        /* Navigation */
+        .nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 2rem 4rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            transition: all 0.5s ease;
+        }
+
+        .nav.scrolled {
+            padding: 1rem 4rem;
+            background: rgba(26, 26, 26, 0.95);
+            backdrop-filter: blur(20px);
+        }
+
+        .nav-logo {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 1.5rem;
+            color: var(--color-gold);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 3rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--color-ivory);
+            text-decoration: none;
+            font-size: 0.9rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            position: relative;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 1px;
+            background: var(--color-gold);
+            transition: width 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--color-gold);
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        /* Canvas for hero */
+        #hero-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: -1;
+        }
+
+        /* Hero Section */
+        .hero {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            position: relative;
+            padding: 0 2rem;
+        }
+
+        .hero-spacer {
+            height: 100vh;
+        }
+
+        .hero-title {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: clamp(3.5rem, 10vw, 9rem);
+            font-weight: 400;
+            line-height: 1.1;
+            margin-bottom: 2rem;
+            opacity: 0;
+            transform: translateY(50px);
+            animation: fadeInUp 1.2s ease forwards 2s;
+        }
+
+        .hero-title span {
+            display: block;
+            background: linear-gradient(135deg, var(--color-ivory) 0%, var(--color-gold-light) 50%, var(--color-ivory) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-title .subtitle {
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            font-size: clamp(1.2rem, 3vw, 2rem);
+            font-style: italic;
+            font-weight: 300;
+            margin-top: 1rem;
+        }
+
+        .hero-description {
+            max-width: 500px;
+            margin: 2rem auto 0;
+            font-size: 1.1rem;
+            line-height: 2;
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeInUp 1s ease forwards 2.5s;
+            color: rgba(245, 241, 232, 0.8);
+        }
+
+        .scroll-indicator {
+            position: absolute;
+            bottom: 3rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            opacity: 0;
+            animation: fadeIn 1s ease forwards 3s;
+        }
+
+        .scroll-indicator span {
+            font-size: 0.7rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+            color: var(--color-gold);
+        }
+
+        .scroll-line {
+            width: 1px;
+            height: 60px;
+            background: linear-gradient(to bottom, var(--color-gold), transparent);
+            animation: scrollLine 2s ease infinite;
+        }
+
+        /* Sections */
+        section {
+            padding: 8rem 4rem;
+            position: relative;
+        }
+
+        .section-header {
+            margin-bottom: 4rem;
+        }
+
+        .section-label {
+            font-size: 0.8rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--color-gold);
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .section-title {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: clamp(2.5rem, 6vw, 4.5rem);
+            font-weight: 400;
+            line-height: 1.2;
+        }
+
+        .section-title .accent {
+            font-style: italic;
+            color: var(--color-gold);
+        }
+
+        /* About Section */
+        .about {
+            background: var(--color-charcoal);
+        }
+
+        .about-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr;
+            gap: 4rem;
+            align-items: center;
+        }
+
+        .about-text p {
+            font-size: 1.2rem;
+            line-height: 2.2;
+            margin-bottom: 2rem;
+            color: rgba(245, 241, 232, 0.9);
+        }
+
+        .about-text .lead {
+            font-size: 1.4rem;
+            color: var(--color-gold);
+            font-style: italic;
+            margin-bottom: 2rem;
+        }
+
+        .about-visual {
+            position: relative;
+            height: 600px;
+        }
+
+        .glass-panel {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, 
+                rgba(30, 58, 95, 0.4) 0%, 
+                rgba(13, 77, 62, 0.3) 50%, 
+                rgba(139, 30, 62, 0.4) 100%);
+            border: 1px solid rgba(184, 138, 68, 0.3);
+            backface-visibility: hidden;
+            transform: rotateY(5deg);
+            transition: transform 0.5s ease;
+        }
+
+        .about-visual:hover .glass-panel {
+            transform: rotateY(0deg);
+        }
+
+        .glass-panel::before {
+            content: '';
+            position: absolute;
+            top: 2%;
+            left: 2%;
+            right: 2%;
+            bottom: 2%;
+            border: 1px solid rgba(184, 138, 68, 0.2);
+        }
+
+        /* Process Section */
+        .process {
+            background: var(--color-charcoal-light);
+            position: relative;
+        }
+
+        .process-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2rem;
+        }
+
+        .process-step {
+            position: relative;
+            padding: 2rem;
+            border-left: 1px solid rgba(184, 138, 68, 0.3);
+        }
+
+        .process-step::before {
+            content: attr(data-step);
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 4rem;
+            font-weight: 400;
+            color: rgba(184, 138, 68, 0.1);
+            position: absolute;
+            top: 0;
+            left: 2rem;
+            z-index: 0;
+        }
+
+        .process-step-number {
+            font-size: 0.9rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--color-gold);
+            margin-bottom: 1rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .process-step h3 {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .process-step p {
+            font-size: 1rem;
+            line-height: 1.8;
+            color: rgba(245, 241, 232, 0.7);
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Portfolio Section */
+        .portfolio {
+            background: var(--color-charcoal);
+        }
+
+        .portfolio-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+        }
+
+        .portfolio-item {
+            position: relative;
+            aspect-ratio: 4/5;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .portfolio-item:nth-child(3) {
+            grid-column: span 2;
+            aspect-ratio: auto;
+            height: 500px;
+        }
+
+        .portfolio-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, 
+                var(--color-cobalt), 
+                var(--color-emerald), 
+                var(--color-crimson));
+            transition: transform 0.7s ease;
+        }
+
+        .portfolio-item:hover .portfolio-image {
+            transform: scale(1.05);
+        }
+
+        .portfolio-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 3rem;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.5s ease;
+        }
+
+        .portfolio-item:hover .portfolio-overlay {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .portfolio-location {
+            font-size: 0.8rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--color-gold);
+            margin-bottom: 0.5rem;
+        }
+
+        .portfolio-title {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .portfolio-description {
+            font-size: 1rem;
+            line-height: 1.8;
+            color: rgba(245, 241, 232, 0.8);
+        }
+
+        /* Contact Section */
+        .contact {
+            background: linear-gradient(to bottom, var(--color-charcoal), var(--color-cobalt));
+        }
+
+        .contact-container {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .contact-text {
+            font-size: 1.5rem;
+            line-height: 2;
+            margin-bottom: 4rem;
+            color: rgba(245, 241, 232, 0.9);
+        }
+
+        .contact-text .highlight {
+            color: var(--color-gold);
+            font-style: italic;
+        }
+
+        .contact-form {
+            text-align: left;
+            background: rgba(255,255,255,0.02);
+            padding: 4rem;
+            border: 1px solid rgba(184, 138, 68, 0.2);
+        }
+
+        .form-group {
+            margin-bottom: 2rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.7rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--color-gold);
+            margin-bottom: 1rem;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 1rem 0;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid rgba(184, 138, 68, 0.3);
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            font-size: 1.2rem;
+            color: var(--color-ivory);
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-bottom-color: var(--color-gold);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 150px;
+        }
+
+        .submit-btn {
+            background: transparent;
+            border: 1px solid var(--color-gold);
+            padding: 1.5rem 4rem;
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            font-size: 1.1rem;
+            letter-spacing: 0.15em;
+            color: var(--color-gold);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 2rem;
+        }
+
+        .submit-btn:hover {
+            background: var(--color-gold);
+            color: var(--color-charcoal);
+        }
+
+        /* Footer */
+        footer {
+            padding: 4rem;
+            background: var(--color-charcoal);
+            border-top: 1px solid rgba(184, 138, 68, 0.2);
+        }
+
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .footer-logo {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 1.5rem;
+            color: var(--color-gold);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+        }
+
+        .footer-address {
+            font-size: 0.9rem;
+            line-height: 1.8;
+            color: rgba(245, 241, 232, 0.6);
+        }
+
+        .footer-social {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .footer-social a {
+            color: var(--color-gold);
+            text-decoration: none;
+            font-size: 0.85rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            transition: color 0.3s ease;
+        }
+
+        .footer-social a:hover {
+            color: var(--color-gold-light);
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes scrollLine {
+            0% {
+                height: 1px;
+                opacity: 0;
+            }
+            50% {
+                height: 60px;
+                opacity: 1;
+            }
+            100% {
+                height: 1px;
+                opacity: 0;
+            }
+        }
+
+        /* Cursor */
+        .cursor {
+            width: 20px;
+            height: 20px;
+            border: 1px solid var(--color-gold);
+            border-radius: 50%;
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            transition: transform 0.1s ease;
+            mix-blend-mode: difference;
+        }
+
+        .cursor-follower {
+            width: 8px;
+            height: 8px;
+            background: var(--color-gold);
+            border-radius: 50%;
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            transition: transform 0.3s ease;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .about-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .process-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .footer-content {
+                flex-direction: column;
+                gap: 3rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .nav {
+                padding: 1rem 2rem;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            section {
+                padding: 4rem 2rem;
+            }
+
+            .process-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .portfolio-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .portfolio-item:nth-child(3) {
+                grid-column: span 1;
+            }
+
+            .contact-form {
+                padding: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Preloader -->
+    <div class="preloader">
+        <div class="preloader-logo">Lumière</div>
+        <div class="preloader-progress">
+            <div class="preloader-progress-bar"></div>
+        </div>
+    </div>
+
+    <!-- Custom Cursor -->
+    <div class="cursor"></div>
+    <div class="cursor-follower"></div>
+
+    <!-- Navigation -->
+    <nav class="nav">
+        <a href="#" class="nav-logo">Lumière Atelier</a>
+        <ul class="nav-links">
+            <li><a href="#about">Atelier</a></li>
+            <li><a href="#process">Processus</a></li>
+            <li><a href="#portfolio">Œuvres</a></li>
+            <li><a href="#contact">Contact</a></li>
+        </ul>
+    </nav>
+
+    <!-- Hero Canvas -->
+    <canvas id="hero-canvas"></canvas>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <h1 class="hero-title">
+            <span>Lumière</span>
+            <span class="subtitle">Atelier Lyon</span>
+        </h1>
+        <p class="hero-description">
+            Depuis 1892, nous transformons la lumière en art sacré. 
+            Chaque panneau raconte une histoire que le temps ne peut effacer.
+        </p>
+        <div class="scroll-indicator">
+            <span>Découvrir</span>
+            <div class="scroll-line"></div>
+        </div>
+    </section>
+
+    <div class="hero-spacer"></div>
+
+    <!-- About Section -->
+    <section id="about" class="about">
+        <div class="about-grid">
+            <div class="about-visual">
+                <div class="glass-panel"></div>
+            </div>
+            <div class="about-text">
+                <span class="section-label">Notre Histoire</span>
+                <h2 class="section-title">L'Art de la <span class="accent">Lumière</span> Captive</h2>
+                <p class="lead">"La lumière n'est pas seulement vue — elle est ressentie."</p>
+                <p>
+                    Fondé par Émile Beaumont dans les ateliers du Vieux-Lyon, 
+                    Lumière Atelier perpétue près d'un siècle et demi de maîtrise 
+                    du vitrail d'art. Nos artisans, héritiers d'une tradition 
+                    dont chaque secret fut transmis de maître à compagnon, 
+                    façonnent la lumière comme d'autres sculptent la pierre.
+                </p>
+                <p>
+                    Chaque œuvre naît d'une collaboration intime avec nos clients, 
+                    artistes, architectes et institutions qui cherchent à capturer 
+                    l'ineffable dans le verre et le plomb. De la cathédrale de Saint-Denis 
+                    au musée du Louvre, nos vitraux illuminent les lieux les plus 
+                    prestigieux de notre patrimoine.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Process Section -->
+    <section id="process" class="process">
+        <div class="section-header">
+            <span class="section-label">Méthode</span>
+            <h2 class="section-title">Du Dessin à la <span class="accent">Lumière</span></h2>
+        </div>
+        <div class="process-grid">
+            <div class="process-step" data-step="I">
+                <span class="process-step-number">Première Étide</span>
+                <h3>Conception</h3>
+                <p>
+                    Chaque projet commence par un dialogue. Nous étudions 
+                    l'architecture, la lumière naturelle, l'histoire du lieu 
+                    pour concevoir une œuvre qui semble toujours avoir été là.
+                </p>
+            </div>
+            <div class="process-step" data-step="II">
+                <span class="process-step-number">Patronage</span>
+                <h3>Carton & Ébauche</h3>
+                <p>
+                    Le maître-verrier dessine au tiers le carton définitif, 
+                    une peinture à grande échelle qui anticipe les jeux 
+                    de lumière et les coloris avant même que le verre ne soit coupé.
+                </p>
+            </div>
+            <div class="process-step" data-step="III">
+                <span class="process-step-number">Coulée</span>
+                <h3>Sélection & Travail du Verre</h3>
+                <p>
+                    Nos verres proviennent de verseries artisanales européennes, 
+                    chacune sélectionnée pour son caractère unique. 
+                    Le verre est taillé, peint, émaillé, puis recuit dans nos fours 
+                    selon des températures précises à chaque fois variables.
+                </p>
+            </div>
+            <div class="process-step" data-step="IV">
+                <span class="process-step-number">Montage</span>
+                <h3>Cimentage & Pose</h3>
+                <p>
+                    Les pièces sont assemblées avec du plomb de première qualité, 
+                    cimentées à la main, puis patinées pour révéler toute la profondeur 
+                    des coloris. L'installation est réalisée par nos soins, 
+                    avec le plus grand soin pour les monuments historiques.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Portfolio Section -->
+    <section id="portfolio" class="portfolio">
+        <div class="section-header">
+            <span class="section-label">Réalisations</span>
+            <h2 class="section-title">Œuvres <span class="accent">Sélectionnées</span></h2>
+        </div>
+        <div class="portfolio-grid">
+            <div class="portfolio-item">
+                <div class="portfolio-image" style="background: linear-gradient(135deg, #1E3A5F, #0D4D3E);"></div>
+                <div class="portfolio-overlay">
+                    <div class="portfolio-location">Lyon, France</div>
+                    <h3 class="portfolio-title">Vitraux de la Chapelle Saint-Jean</h3>
+                    <p class="portfolio-description">
+                        Cycle de douze panneaux représentant les apôtres, 
+                        réalisé pour la basilique Saint-Jean en 2019. 
+                        Verres anticoles reproduits selon les techniques du XIIe siècle.
+                    </p>
+                </div>
+            </div>
+            <div class="portfolio-item">
+                <div class="portfolio-image" style="background: linear-gradient(135deg, #8B1E3E, #4A2C5A);"></div>
+                <div class="portfolio-overlay">
+                    <div class="portfolio-location">Paris, France</div>
+                    <h3 class="portfolio-title">Rose du Transept Nord</h3>
+                    <p class="portfolio-description">
+                        Rosace de 4 mètres de diamètre pour la Sainte-Chapelle, 
+                        célébrant le couronnement de la Vierge. 
+                        Plus de trois cents pièces de verre assemblées.
+                    </p>
+                </div>
+            </div>
+            <div class="portfolio-item">
+                <div class="portfolio-image" style="background: linear-gradient(135deg, #C88A3A, #B88A44, #D4AF68);"></div>
+                <div class="portfolio-overlay">
+                    <div class="portfolio-location">Bordeaux, France</div>
+                    <h3 class="portfolio-title">La Nef des Étincelles</h3>
+                    <p class="portfolio-description">
+                        Vitrail monumental de 120 m² pour le Château Margaux, 
+                        évoquant la vigne et le vin à travers des milliers 
+                        de fragments de verre doré suspendus dans l'espace.
+                    </p>
+                </div>
+            </div>
+            <div class="portfolio-item">
+                <div class="portfolio-image" style="background: linear-gradient(135deg, #0D4D3E, #1E3A5F);"></div>
+                <div class="portfolio-overlay">
+                    <div class="portfolio-location">Marseille, France</div>
+                    <h3 class="portfolio-title">Cathédrale de la Major</h3>
+                    <p class="portfolio-description">
+                        Restauration complète des vitraux du XIXe siècle 
+                        et création de trois nouveaux panneaux pour le chœur. 
+                        Travail de plusieurs années sur ce monument emblématique.
+                    </p>
+                </div>
+            </div>
+            <div class="portfolio-item">
+                <div class="portfolio-image" style="background: linear-gradient(135deg, #4A2C5A, #8B1E3E);"></div>
+                <div class="portfolio-overlay">
+                    <div class="portfolio-location">Strasbourg, France</div>
+                    <h3 class="portfolio-title">Verrière de la Paix</h3>
+                    <p class="portfolio-description">
+                        Commande commémorative pour le Centenaire de la Libération, 
+                        un vitrail de 50 mètres carré où la lumière traverse 
+                        des couches de verre pour créer un effet de halo céleste.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="contact">
+        <div class="contact-container">
+            <span class="section-label">Contact</span>
+            <h2 class="section-title">Donnez à Votre <span class="accent">Lumière</span> une Forme</h2>
+            <p class="contact-text">
+                Pour les commandes et les demandes d'information, 
+                nous vous invitons à nous écrire. Chaque projet, 
+                quelle qu'en soit l'échelle, mérite une attention 
+                particulière et un dialogue approfondi.
+            </p>
+            <div class="contact-form">
+                <form>
+                    <div class="form-group">
+                        <label for="name">Nom</label>
+                        <input type="text" id="name" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Adresse Email</label>
+                        <input type="email" id="email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="project">Description du Projet</label>
+                        <textarea id="project" name="project" required></textarea>
+                    </div>
+                    <button type="submit" class="submit-btn">Envoyer</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div>
+                <div class="footer-logo">Lumière Atelier</div>
+                <p class="footer-address">
+                    12 Quai Romain Rolland<br>
+                    69002 Lyon, France<br>
+                    +33 4 78 92 34 56<br>
+                    atelier@lumiere-atelier.fr
+                </p>
+            </div>
+            <div class="footer-social">
+                <a href="#">Instagram</a>
+                <a href="#">Pinterest</a>
+                <a href="#">LinkedIn</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Preloader
+        window.addEventListener('load', () => {
+            const progressBar = document.querySelector('.preloader-progress-bar');
+            progressBar.style.width = '100%';
+            
+            setTimeout(() => {
+                document.querySelector('.preloader').classList.add('hidden');
+            }, 1500);
+        });
+
+        // Navigation scroll effect
+        window.addEventListener('scroll', () => {
+            const nav = document.querySelector('.nav');
+            if (window.scrollY > 100) {
+                nav.classList.add('scrolled');
+            } else {
+                nav.classList.remove('scrolled');
+            }
+        });
+
+        // Custom cursor
+        const cursor = document.querySelector('.cursor');
+        const follower = document.querySelector('.cursor-follower');
+        
+        document.addEventListener('mousemove', (e) => {
+            cursor.style.left = e.clientX - 10 + 'px';
+            cursor.style.top = e.clientY - 10 + 'px';
+            
+            setTimeout(() => {
+                follower.style.left = e.clientX - 4 + 'px';
+                follower.style.top = e.clientY - 4 + 'px';
+            }, 50);
+        });
+
+        // Cursor hover effect
+        document.querySelectorAll('a, button, .portfolio-item').forEach(el => {
+            el.addEventListener('mouseenter', () => {
+                cursor.style.transform = 'scale(2)';
+                cursor.style.backgroundColor = 'rgba(184, 138, 68, 0.1)';
+            });
+            el.addEventListener('mouseleave', () => {
+                cursor.style.transform = 'scale(1)';
+                cursor.style.backgroundColor = 'transparent';
+            });
+        });
+
+        // Three.js Hero Background
+        const canvas = document.getElementById('hero-canvas');
+        constrenderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+        
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        
+        // Create stained glass panels
+        const glassMaterial = new THREE.MeshBasicMaterial({
+            color: 0xB88A44,
+            transparent: true,
+            opacity: 0.3,
+            side: THREE.DoubleSide,
+            blending: THREE.AdditiveBlending
+        });
+
+        const shapes = [];
+        const colors = [0x1E3A5F, 0x0D4D3E, 0x8B1E3E, 0x4A2C5A, 0xC88A3A];
+
+        function createRandomShape() {
+            const geometry = new THREE.ShapeGeometry(createRandomShapePath());
+            const material = new THREE.MeshBasicMaterial({
+                color: colors[Math.floor(Math.random() * colors.length)],
+                transparent: true,
+                opacity: 0.4,
+                side: THREE.DoubleSide,
+                blending: THREE.AdditiveBlending
+            });
+            const mesh = new THREE.Mesh(geometry, material);
+            scene.add(mesh);
+            shapes.push({ mesh, velocity: Math.random() * 0.002 + 0.001 });
+        }
+
+        function createRandomShapePath() {
+            const path = new THREE.Shape();
+            const points = 5 + Math.floor(Math.random() * 3);
+            const radius = 2 + Math.random() * 3;
+            
+            for (let i = 0; i < points; i++) {
+                const angle = (i / points) * Math.PI * 2;
+                const r = radius * (0.8 + Math.random() * 0.4);
+                const x = Math.cos(angle) * r;
+                const y = Math.sin(angle) * r;
+                
+                if (i === 0) {
+                    path.moveTo(x, y);
+                } else {
+                    path.lineTo(x, y);
+                }
+            }
+            
+            path.closePath();
+            return path;
+        }
+
+        // Create initial shapes
+        for (let i = 0; i < 15; i++) {
+            createRandomShape();
+        }
+
+        camera.position.z = 10;
+
+        // Mouse interaction
+        let mouseX = 0;
+        let mouseY = 0;
+        let targetX = 0;
+        let targetY = 0;
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = (e.clientX - window.innerWidth / 2) * 0.001;
+            mouseY = (e.clientY - window.innerHeight / 2) * 0.001;
+        });
+
+        // Animation
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const time = clock.getElapsedTime();
+            
+            targetX += (mouseX - targetX) * 0.05;
+            targetY += (mouseY - targetY) * 0.05;
+
+            camera.position.x += (targetX - camera.position.x) * 0.05;
+            camera.position.y += (-targetY - camera.position.y) * 0.05;
+            camera.lookAt(scene.position);
+
+            shapes.forEach((shape, i) => {
+                shape.mesh.rotation.x += shape.velocity;
+                shape.mesh.rotation.y += shape.velocity;
+                shape.mesh.position.y = Math.sin(time + i) * 0.5;
+                shape.mesh.material.opacity = 0.3 + Math.sin(time * 2 + i) * 0.1;
+            });
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // Resize handler
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Smooth scroll for nav links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Intersection Observer for animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -100px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.process-step, .portfolio-item').forEach(el => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(30px)';
+            el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+            observer.observe(el);
+        });
+
+        // Form submission
+        document.querySelector('form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const btn = document.querySelector('.submit-btn');
+            const originalText = btn.textContent;
+            btn.textContent = 'Message Envoyé';
+            btn.style.background = 'var(--color-gold)';
+            btn.style.color = 'var(--color-charcoal)';
+            
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.style.background = 'transparent';
+                btn.style.color = 'var(--color-gold)';
+                e.target.reset();
+            }, 3000);
+        });
+    </script>
+</body>
+</html>
